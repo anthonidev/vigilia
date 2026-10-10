@@ -2,12 +2,18 @@ import SwiftUI
 
 struct MenuContent: View {
     let session: SessionManager
+    let bot: TelegramBot
+    let settings: AppSettings
+    let token: TelegramTokenStore
 
     @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         if session.isActive {
             Text(session.statusText)
+            if let botStatus {
+                Text(botStatus)
+            }
             Divider()
         }
 
@@ -40,6 +46,22 @@ struct MenuContent: View {
             NSApplication.shared.terminate(nil)
         }
         .keyboardShortcut("q")
+    }
+}
+
+extension MenuContent {
+    /// Estado del bot, solo si está activado en Ajustes.
+    private var botStatus: String? {
+        guard settings.botEnabled else { return nil }
+        guard token.hasToken else { return "Bot: falta el token" }
+        guard settings.isAccountLinked else { return "Bot: falta vincular la cuenta" }
+        return switch bot.status {
+        case .off, .connecting: "Bot: conectando…"
+        case .running: "Bot conectado"
+        case .reconnecting: "Bot: sin conexión, reintentando…"
+        case .invalidToken: "Bot: token inválido"
+        case .conflict: "Bot: otro programa usa este bot"
+        }
     }
 }
 

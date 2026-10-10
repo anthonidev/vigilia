@@ -5,6 +5,8 @@ import Observation
 @Observable
 final class TelegramTokenStore {
     private(set) var hasToken = false
+    /// Aumenta cada vez que se guarda o borra el token, para que el bot se reinicie con el nuevo.
+    private(set) var revision = 0
 
     @ObservationIgnored private let keychain: KeychainStore
     private static let account = "telegram-bot-token"
@@ -24,11 +26,13 @@ final class TelegramTokenStore {
         guard Self.isPlausible(trimmed) else { throw TokenError.invalidFormat }
         try keychain.save(trimmed, account: Self.account)
         hasToken = true
+        revision += 1
     }
 
     func delete() throws {
         try keychain.delete(account: Self.account)
         hasToken = false
+        revision += 1
     }
 
     /// Los tokens de BotFather tienen la forma `123456789:AAH…` (ID numérico, dos puntos y unos 35 caracteres).

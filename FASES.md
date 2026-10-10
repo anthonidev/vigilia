@@ -142,54 +142,55 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 
 ---
 
-## Fase 3: Bot de Telegram (núcleo)
+## Fase 3: Bot de Telegram (núcleo) 🟡 código listo, falta la prueba real
 
 **Objetivo:** controlar la sesión desde Telegram, de forma segura.
 
 ### Tareas
 
 **Modelos y cliente (`Telegram/TelegramModels.swift`, `TelegramAPI.swift`)**
-- [ ] Modelos `Codable` con `convertFromSnakeCase`: `Update`, `Message`, `User`, `Chat`, `CallbackQuery`, `InlineKeyboardMarkup`, `InlineKeyboardButton`, y un `Response<T>` con `ok`, `result` y `description`.
-- [ ] `TelegramAPI`: un `actor` que recibe el token, con `URLSession` y `async/await`:
+- [x] Modelos `Codable` con `convertFromSnakeCase`: `Update`, `Message`, `User`, `Chat`, `CallbackQuery`, `InlineKeyboardMarkup`, `InlineKeyboardButton`, y un `Response<T>` con `ok`, `result` y `description`.
+- [x] `TelegramAPI`: un `actor` que recibe el token, con `URLSession` y `async/await`:
   - `getMe()`
   - `getUpdates(offset:timeout:)`, con un timeout de petición > 50 s
   - `sendMessage(chatID:text:keyboard:)`
-  - `editMessageReplyMarkup(...)`, para quitar los botones de avisos antiguos
+  - `editMessageReplyMarkup(...)`, para quitar los botones de avisos antiguos (se usa en la fase 4)
   - `answerCallbackQuery(id:text:)`
   - `setMyCommands(_:)`
   - Errores tipados: `.invalidToken` (401), `.conflict` (409, otro proceso usa el bot), `.network`, `.api(description)`.
 
 **Lógica pura (testeable)**
-- [ ] `DurationParser`: `"30m"`, `"2h"`, `"1h30m"`, `"90"` (minutos), `"1.5h"` → minutos. Rechaza 0, negativos y más de 24 h.
-- [ ] `BotCommand`: un `enum` que se obtiene del texto (`/estado`, `/mas <d>`, `/set <d>`, `/indefinido`, `/off`, `/captura [hd]`, `/ayuda`, `/vincular <código>`). Acepta `/comando@NombreBot` y mayúsculas.
-- [ ] `CommandRouter`: recibe un `BotCommand` y devuelve una respuesta (texto + teclado), actuando sobre un protocolo `SessionControlling` que implementa `SessionManager`.
-- [ ] Textos de respuesta en español, centralizados en un archivo (`BotStrings`).
+- [x] `DurationParser`: `"30m"`, `"2h"`, `"1h30m"`, `"90"` (minutos), `"1.5h"` → minutos. Rechaza 0, negativos y más de 24 h.
+- [x] `BotCommand`: un `enum` que se obtiene del texto (`/estado`, `/mas <d>`, `/set <d>`, `/indefinido`, `/off`, `/captura [hd]`, `/ayuda`, `/vincular <código>`). Acepta `/comando@NombreBot` y mayúsculas.
+- [x] `CommandRouter` (`/captura` responde "llegarán pronto" hasta la fase 5): recibe un `BotCommand` y devuelve una respuesta (texto + teclado), actuando sobre un protocolo `SessionControlling` que implementa `SessionManager`.
+- [x] Textos de respuesta en español, centralizados en un archivo (`BotStrings`).
 
 **Bot (`TelegramBot.swift`)**
-- [ ] `start()` y `stop()`. El bucle es un `Task` que se cancela al parar.
-- [ ] Al arrancar:
+- [x] `start()` y `stop()`. El bucle es un `Task` que se cancela al parar.
+- [x] Al arrancar:
   1. Descartar los mensajes pendientes con `getUpdates(offset: -1)` y guardar el siguiente `offset`.
   2. Registrar los comandos con `setMyCommands`.
-- [ ] Bucle: `getUpdates` → por cada update, **autorizar** → enrutar → responder.
-- [ ] **Autorización:** solo se procesan updates de chats `private` cuyo `from.id == authorizedUserID`. El resto se ignora sin responder.
-- [ ] Errores: si falla la red, se reintenta con espera creciente (1, 2, 4… hasta 60 s). Con 401, el bot se para y se marca el error en el menú. Con 409, también se para y se muestra un aviso.
-- [ ] Botones en línea `[+30 min] [+1 h] [+2 h]` / `[Apagar] [Captura]`, con `callback_data` del tipo `ext:30`, `off`, `shot`.
+- [x] Bucle: `getUpdates` → por cada update, **autorizar** → enrutar → responder.
+- [x] **Autorización:** solo se procesan updates de chats `private` cuyo `from.id == authorizedUserID`. El resto se ignora sin responder.
+- [x] Errores: si falla la red, se reintenta con espera creciente (1, 2, 4… hasta 60 s). Con 401, el bot se para y se marca el error en el menú. Con 409 se reintenta 3 veces (suele ser la conexión anterior que aún no se cerró) y después se para con un aviso.
+- [x] Si el bot se va a apagar mientras responde (por ejemplo, tras `/off` o al terminar la vinculación), primero termina de responder.
+- [x] Botones en línea `[+30 min] [+1 h] [+2 h]` / `[Apagar] [Captura]`, con `callback_data` del tipo `ext:30`, `off`, `shot`.
 
 **Vinculación (`AccountLinker.swift`)**
-- [ ] **Vincular…** en Ajustes:
+- [x] **Vincular…** en Ajustes (además del comando, hay un botón **Abrir en Telegram** con el enlace `t.me/<bot>?start=<código>`, que envía `/start <código>` con un toque):
   1. Genera un código aleatorio de 6 dígitos, válido 5 minutos.
   2. Arranca el bot en modo vinculación (aunque no haya sesión).
   3. Muestra: "Envía `/vincular 482913` a @TuBot".
-- [ ] En modo vinculación, el **único** comando aceptado de usuarios desconocidos es `/vincular <código>`.
-- [ ] Si el código es correcto, guarda `from.id` y `@username`, responde "Cuenta vinculada" y sale del modo vinculación. Después, el bot se para si no hay sesión activa.
-- [ ] Tras 5 intentos fallidos o al caducar el código, se cancela la vinculación.
+- [x] En modo vinculación, el **único** comando aceptado de usuarios desconocidos es `/vincular <código>`.
+- [x] Si el código es correcto, guarda `from.id` y `@username`, responde "Cuenta vinculada" y sale del modo vinculación. Después, el bot se para si no hay sesión activa.
+- [x] Tras 5 intentos fallidos o al caducar el código, se cancela la vinculación.
 
 **Integración**
-- [ ] `SessionManager` arranca el bot al empezar una sesión y lo para al terminarla, si `botEnabled`, hay token y hay cuenta vinculada.
-- [ ] El menú muestra el estado del bot: "Bot conectado", "Bot: token inválido", etc.
-- [ ] El botón **Probar** de Ajustes llama a `getMe` y muestra "@NombreBot ✓" o el error.
+- [x] `SessionManager` arranca el bot al empezar una sesión y lo para al terminarla, si `botEnabled`, hay token y hay cuenta vinculada.
+- [x] El menú muestra el estado del bot: "Bot conectado", "Bot: token inválido", etc.
+- [x] El botón **Probar** de Ajustes llama a `getMe` y muestra "@NombreBot ✓" o el error.
 
-### Tests
+### Tests (64 en total en el proyecto)
 - `DurationParser`: todos los formatos válidos e inválidos.
 - `BotCommand`: análisis de texto, incluido `@NombreBot` y argumentos que faltan.
 - `CommandRouter` con un `SessionControlling` falso: cada comando produce la acción y la respuesta correctas, incluido `/mas` con sesión indefinida.
@@ -197,12 +198,14 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 - `AccountLinker`: código correcto, incorrecto, caducado y demasiados intentos.
 
 ### Criterios de aceptación
-- Vincular la cuenta desde Ajustes funciona de principio a fin.
-- Con una sesión activa, todos los comandos de `IDEA.md` funcionan (excepto `/captura`).
-- Los botones `+30 min` y `Apagar` funcionan, y el botón deja de mostrar el reloj de carga.
-- Un mensaje desde otra cuenta no recibe respuesta.
-- Al desactivar la sesión, el bot deja de responder.
-- Un `/off` enviado con el bot apagado **no** afecta a la siguiente sesión.
+Los marcados con *(tests)* están cubiertos con el Telegram falso; queda repetirlos con el bot real.
+- [x] Con un token falso, la API real de Telegram responde 401 y la app lo trata como token inválido (la red funciona desde el sandbox).
+- [ ] Vincular la cuenta desde Ajustes funciona de principio a fin.
+- [ ] Con una sesión activa, todos los comandos de `IDEA.md` funcionan (excepto `/captura`).
+- [ ] Los botones `+30 min` y `Apagar` funcionan, y el botón deja de mostrar el reloj de carga.
+- [x] (tests) Un mensaje desde otra cuenta no recibe respuesta.
+- [x] (tests) Al desactivar la sesión, el bot deja de responder.
+- [x] (tests) Un `/off` enviado con el bot apagado **no** afecta a la siguiente sesión.
 
 ---
 
