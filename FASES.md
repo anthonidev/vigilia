@@ -283,13 +283,13 @@ Probado con el bot real el 2026-10-10. Los marcados con *(tests)* están cubiert
 **Objetivo:** que funcione bien en el día a día, sin sorpresas.
 
 ### Tareas
-- [ ] **Sueño y despertar:** escuchar `NSWorkspace.willSleepNotification` y `didWakeNotification`.
-  - Al despertar: si la sesión caducó, se cierra (y se avisa, como en la fase 4); si no, el polling se reanuda de inmediato.
-- [ ] **Red:** usar `NWPathMonitor` para reanudar el polling en cuanto vuelva la conexión, en lugar de esperar al siguiente reintento.
-- [ ] **Indicadores en el menú:** el estado del bot (conectado / reconectando / error) y un aviso si falta el token o la cuenta y el bot está activado.
-- [ ] **Accesibilidad:** etiquetas de VoiceOver en el ícono ("Vigilia, activa, quedan 1 h 20 min").
-- [ ] **Ícono de la app:** un ícono simple de taza para Ajustes y el Finder.
-- [ ] **Registro:** `Logger` (`os`) con el subsistema `com.tonis.vigilia` y categorías `session`, `telegram`, `screenshot`. **El token nunca se registra.**
+- [x] **Sueño y despertar:** `SystemEventsMonitor` escucha `didWakeNotification`.
+  - [x] Al despertar: si la sesión caducó, se cierra (y se avisa, como en la fase 4); si no, el polling se reanuda de inmediato.
+- [x] **Red:** `NWPathMonitor` reanuda el polling en cuanto vuelve la conexión, en lugar de esperar al siguiente reintento. `reconnectNow()` no descarta los mensajes pendientes.
+- [x] **Indicadores en el menú:** el estado del bot (conectado / reconectando / error) y un aviso si falta el token o la cuenta y el bot está activado.
+- [x] **Accesibilidad:** etiquetas de VoiceOver en el ícono ("Vigilia, activa, quedan 1 h 20 min").
+- [x] **Ícono de la app:** taza con vapor sobre un cielo nocturno, generado con `scripts/generate-icon.swift`.
+- [x] **Registro:** `Logger` (`os`) con el subsistema `com.tonis.vigilia` y categorías `session`, `telegram`, `screenshot`. **El token nunca se registra.**
 - [x] **Instalación:** `scripts/install.sh` compila en Release, cierra cualquier copia abierta y copia `Vigilia.app` a `/Applications` (adelantado antes de la fase 5).
 - [ ] Revisar todos los textos (español, tono consistente).
 - [ ] Un `README.md` con la configuración inicial (BotFather → token → vincular → permisos).
