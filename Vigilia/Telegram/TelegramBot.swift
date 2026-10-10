@@ -2,8 +2,8 @@ import Foundation
 import Observation
 import os
 
-/// Bot de Telegram: lee mensajes con long polling, solo obedece a la cuenta autorizada
-/// y se enciende y apaga solo según la sesión y los ajustes.
+/// Bot de Telegram: se enciende y apaga solo según la sesión y los ajustes, y lee los mensajes
+/// con long polling. Qué hacer con cada mensaje lo decide `BotUpdateHandler`.
 @Observable
 final class TelegramBot {
     nonisolated enum Status: Equatable, Sendable {
@@ -24,12 +24,16 @@ final class TelegramBot {
     @ObservationIgnored private let token: TelegramTokenStore
     @ObservationIgnored private let linker: AccountLinker
     @ObservationIgnored private let makeClient: (String) -> any TelegramClient
-    @ObservationIgnored private let router: CommandRouter
-    @ObservationIgnored private let screenshots: ScreenshotSender
+    @ObservationIgnored private let handler: BotUpdateHandler
 
     @ObservationIgnored private var pollTask: Task<Void, Never>?
+    /// Identifica la tarea de polling vigente. Una tarea cancelada puede tardar en terminar;
+    /// con esto no pisa el estado de la nueva.
+    @ObservationIgnored private var generation = 0
     /// Siguiente update a pedir. Se conserva al reconectar para no perder mensajes.
     @ObservationIgnored private var offset: Int?
+    /// Si ya se descartaron los mensajes antiguos desde que se encendió el bot.
+    @ObservationIgnored private var isPrepared = false
     @ObservationIgnored private var runningTokenRevision: Int?
     @ObservationIgnored private var isHandling = false
     @ObservationIgnored private var stopRequested = false
@@ -53,8 +57,12 @@ final class TelegramBot {
         self.token = token
         self.linker = linker
         self.makeClient = makeClient
-        router = CommandRouter(session: session)
-        screenshots = ScreenshotSender(capturer: capturer)
+        handler = BotUpdateHandler(
+            session: session,
+            settings: settings,
+            linker: linker,
+            screenshots: ScreenshotSender(capturer: capturer)
+        )
         observeConditions()
     }
 
@@ -78,6 +86,17 @@ final class TelegramBot {
         return try await makeClient(value).getMe()
     }
 
+    /// Tras despertar la Mac o recuperar la red: corta la petición colgada (o la espera entre
+    /// reintentos) y vuelve a pedir enseguida, sin descartar los mensajes pendientes.
+    func reconnectNow() {
+        // Si el bot se va a apagar (por ejemplo, la sesión caducó mientras la Mac dormía), no reconecta.
+        guard shouldRun, pollTask != nil, !isHandling else { return }
+        Self.logger.info("Reconectando el bot")
+        pollTask?.cancel()
+        // Si aún no había descartado los mensajes antiguos, tiene que hacerlo ahora.
+        start(discardPending: !isPrepared)
+    }
+
     // MARK: - Encendido y apagado
 
     /// Re-evalúa `shouldRun` cada vez que cambia algo de lo que depende.
@@ -98,10 +117,10 @@ final class TelegramBot {
         if shouldRun {
             stopRequested = false
             if pollTask == nil {
-                start()
+                start(discardPending: true)
             } else if runningTokenRevision != token.revision {
                 stop()
-                start()
+                start(discardPending: true)
             }
         } else if pollTask != nil {
             // Si está respondiendo un mensaje, termina de responder antes de apagarse.
@@ -116,58 +135,64 @@ final class TelegramBot {
     }
 
     /// - Parameter discardPending: al encender el bot se descarta lo antiguo; al reconectar, no.
-    private func start(discardPending: Bool = true) {
+    private func start(discardPending: Bool) {
         guard let value = try? token.load() else {
             status = .off
             return
         }
         let client = makeClient(value)
+        generation += 1
+        let generation = generation
         runningTokenRevision = token.revision
+        isHandling = false
         if discardPending {
             Self.logger.info("Bot encendido")
+            isPrepared = false
             status = .connecting
         }
         pollTask = Task { [weak self] in
-            await self?.poll(client, discardPending: discardPending)
+            await self?.poll(client, generation: generation)
         }
-    }
-
-    /// Tras despertar la Mac o recuperar la red: corta la petición colgada (o la espera entre
-    /// reintentos) y vuelve a pedir enseguida, sin descartar los mensajes pendientes.
-    func reconnectNow() {
-        guard pollTask != nil, !isHandling else { return }
-        Self.logger.info("Reconectando el bot")
-        pollTask?.cancel()
-        pollTask = nil
-        start(discardPending: false)
     }
 
     private func stop() {
         Self.logger.info("Bot apagado")
         pollTask?.cancel()
+        finishPolling(with: .off)
+    }
+
+    private func finishPolling(with status: Status) {
+        generation += 1
         pollTask = nil
         runningTokenRevision = nil
+        isHandling = false
         stopRequested = false
-        status = .off
+        self.status = status
     }
 
     // MARK: - Polling
 
-    private func poll(_ client: any TelegramClient, discardPending: Bool) async {
+    /// Si la tarea con este número sigue siendo la vigente.
+    private func isCurrent(_ generation: Int) -> Bool {
+        generation == self.generation && !Task.isCancelled
+    }
+
+    private func poll(_ client: any TelegramClient, generation: Int) async {
         var backoff: Duration = .seconds(1)
         var conflicts = 0
-        var prepared = !discardPending
 
-        while !Task.isCancelled, !stopRequested {
+        while isCurrent(generation), !stopRequested {
             do {
-                if !prepared {
-                    offset = try await discardPendingUpdates(client)
+                if !isPrepared {
+                    let next = try await discardPendingUpdates(client)
                     try await client.setMyCommands(BotCommand.menu)
-                    prepared = true
+                    guard isCurrent(generation) else { return }
+                    offset = next
+                    isPrepared = true
                 }
 
                 let updates = try await client.getUpdates(offset: offset, timeout: Self.pollTimeout)
-                guard !Task.isCancelled else { break }
+                guard isCurrent(generation) else { return }
                 status = .running
                 backoff = .seconds(1)
                 conflicts = 0
@@ -175,21 +200,23 @@ final class TelegramBot {
                 isHandling = true
                 for update in updates {
                     offset = update.updateId + 1
-                    await handle(update, client: client)
+                    await handler.handle(update, client: client)
+                    guard isCurrent(generation) else { return }
                 }
                 isHandling = false
             } catch is CancellationError {
-                break
+                return
             } catch TelegramError.invalidToken {
-                finishPolling(with: .invalidToken)
+                if isCurrent(generation) { finishPolling(with: .invalidToken) }
                 return
             } catch TelegramError.conflict where conflicts < Self.conflictRetries {
                 conflicts += 1
                 try? await Task.sleep(for: .seconds(2))
             } catch TelegramError.conflict {
-                finishPolling(with: .conflict)
+                if isCurrent(generation) { finishPolling(with: .conflict) }
                 return
             } catch {
+                guard isCurrent(generation) else { return }
                 Self.logger.error("Error de Telegram, reintentando: \(String(describing: error), privacy: .public)")
                 status = .reconnecting
                 try? await Task.sleep(for: backoff)
@@ -197,8 +224,8 @@ final class TelegramBot {
             }
         }
 
-        isHandling = false
-        if stopRequested, !Task.isCancelled {
+        // Se pidió apagar mientras respondía: ya terminó de responder.
+        if isCurrent(generation), stopRequested {
             finishPolling(with: .off)
         }
     }
@@ -207,87 +234,5 @@ final class TelegramBot {
     private func discardPendingUpdates(_ client: any TelegramClient) async throws -> Int? {
         let last = try await client.getUpdates(offset: -1, timeout: 0).last
         return last.map { $0.updateId + 1 }
-    }
-
-    private func finishPolling(with status: Status) {
-        pollTask = nil
-        runningTokenRevision = nil
-        isHandling = false
-        stopRequested = false
-        self.status = status
-    }
-
-    // MARK: - Mensajes
-
-    private func handle(_ update: TelegramUpdate, client: any TelegramClient) async {
-        if let message = update.message {
-            await handle(message, client: client)
-        } else if let callback = update.callbackQuery {
-            await handle(callback, client: client)
-        }
-    }
-
-    private func handle(_ message: TelegramMessage, client: any TelegramClient) async {
-        guard let user = message.from, message.chat.isPrivate,
-              let text = message.text, let command = BotCommand(text: text)
-        else { return }
-
-        // Durante la vinculación, cualquiera puede enviar el código; nada más.
-        if case .link(let code) = command, linker.isLinking {
-            let reply: String
-            switch linker.verify(code, from: user) {
-            case .linked: reply = BotText.linked
-            case .wrongCode: reply = BotText.wrongCode
-            case .expired: reply = BotText.linkExpired
-            case .tooManyAttempts: reply = BotText.tooManyAttempts
-            case .notLinking: return
-            }
-            await send(BotReply(text: reply), to: message.chat.id, client: client)
-            return
-        }
-
-        guard isAuthorized(user, chat: message.chat) else { return }
-        await respond(to: command, chatID: message.chat.id, client: client)
-    }
-
-    private func handle(_ callback: TelegramCallbackQuery, client: any TelegramClient) async {
-        guard let chat = callback.message?.chat, isAuthorized(callback.from, chat: chat) else { return }
-
-        // Quita el reloj de carga del botón cuanto antes.
-        try? await client.answerCallbackQuery(id: callback.id, text: nil)
-        // Y los botones de ese mensaje, para no pulsarlos dos veces. La respuesta trae botones nuevos.
-        if let message = callback.message {
-            try? await client.editMessageReplyMarkup(chatID: chat.id, messageID: message.messageId, keyboard: nil)
-        }
-
-        guard let data = callback.data, let command = BotCommand(callbackData: data) else { return }
-        await respond(to: command, chatID: chat.id, client: client)
-    }
-
-    private func respond(to command: BotCommand, chatID: Int64, client: any TelegramClient) async {
-        let reply = router.reply(to: command)
-        if !reply.text.isEmpty {
-            await send(reply, to: chatID, client: client)
-        }
-
-        switch reply.followUp {
-        case .none: break
-        case .deactivate: session.deactivate(remotely: true)
-        case .screenshot(let request): await screenshots.handle(request, chatID: chatID, client: client)
-        }
-    }
-
-    private func send(_ reply: BotReply, to chatID: Int64, client: any TelegramClient) async {
-        do {
-            try await client.sendMessage(chatID: chatID, text: reply.text, keyboard: reply.keyboard)
-        } catch {
-            Self.logger.error("No se pudo enviar la respuesta: \(String(describing: error), privacy: .public)")
-        }
-    }
-
-    /// Solo la cuenta vinculada, y solo en su chat privado con el bot.
-    private func isAuthorized(_ user: TelegramUser, chat: TelegramChat) -> Bool {
-        guard let authorized = settings.authorizedUserID else { return false }
-        return user.id == authorized && chat.isPrivate
     }
 }

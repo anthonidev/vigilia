@@ -61,7 +61,11 @@ actor FakeTelegramClient {
     private(set) var albums: [[TelegramUpload]] = []
     private(set) var chatActions: [String] = []
 
+    /// Cuánto tarda en responder la petición que descarta los mensajes antiguos.
+    private var discardDelay: Duration = .zero
+
     func setPending(_ updates: [TelegramUpdate]) { pending = updates }
+    func setDiscardDelay(_ delay: Duration) { discardDelay = delay }
     func setError(_ error: TelegramError?) { self.error = error }
     func enqueue(_ updates: TelegramUpdate...) { queue.append(updates) }
 
@@ -77,7 +81,10 @@ extension FakeTelegramClient: TelegramClient {
     func getUpdates(offset: Int?, timeout: Int) async throws -> [TelegramUpdate] {
         offsets.append(offset)
         if let error { throw error }
-        if offset == -1 { return Array(pending.suffix(1)) }
+        if offset == -1 {
+            try await Task.sleep(for: discardDelay)
+            return Array(pending.suffix(1))
+        }
         // Long polling: espera hasta que el test encole algo o se cancele la tarea.
         while queue.isEmpty {
             try await Task.sleep(for: .milliseconds(5))

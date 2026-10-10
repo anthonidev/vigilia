@@ -214,4 +214,32 @@ final class TelegramBotTests {
         #expect(offsets.filter { $0 == -1 }.count == 1, "Solo se descarta la cola al encender, no al reconectar")
         #expect(bot.status == .running)
     }
+
+    @Test func reconnectBeforeDiscardingStillDiscards() async {
+        await client.setPending([Updates.text("/off", id: 10, from: Self.owner)])
+        await client.setDiscardDelay(.milliseconds(200))
+        let bot = startBot()
+
+        // Reconecta mientras aún está descartando la cola: el /off antiguo no debe ejecutarse.
+        try? await Task.sleep(for: .milliseconds(50))
+        bot.reconnectNow()
+
+        #expect(await eventually { await client.offsets.contains(11) })
+        #expect(await client.offsets.filter { $0 == -1 }.count == 2)
+        #expect(!session.deactivated)
+    }
+
+    @Test func doesNotReconnectWhenAboutToStop() async {
+        let bot = startBot()
+        #expect(await eventually { await client.offsets.count >= 2 })
+        let requests = await client.offsets.count
+
+        // La sesión acaba de terminar (por ejemplo, al despertar) y aún no se ha apagado el bot.
+        session.isActive = false
+        bot.reconnectNow()
+
+        #expect(await eventually { bot.status == .off })
+        try? await Task.sleep(for: .milliseconds(50))
+        #expect(await client.offsets.count == requests)
+    }
 }

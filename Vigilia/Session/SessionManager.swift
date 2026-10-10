@@ -16,7 +16,6 @@ final class SessionManager {
     @ObservationIgnored private let timeSource: TimeSource
     @ObservationIgnored private let power: PowerAsserting
     @ObservationIgnored private var timerTask: Task<Void, Never>?
-    @ObservationIgnored private var continuations: [UUID: AsyncStream<SessionEvent>.Continuation] = [:]
     @ObservationIgnored private var observers: [(SessionEvent) -> Void] = []
     /// Si toca avisar al bajar de 10 minutos.
     @ObservationIgnored private var warningArmed = false
@@ -117,19 +116,9 @@ final class SessionManager {
 
     // MARK: - Eventos
 
-    /// Un flujo nuevo de eventos. Puede haber varios oyentes a la vez (bot, avisos…).
-    func events() -> AsyncStream<SessionEvent> {
-        let (stream, continuation) = AsyncStream.makeStream(of: SessionEvent.self)
-        let id = UUID()
-        continuations[id] = continuation
-        continuation.onTermination = { [weak self] _ in
-            Task { @MainActor in self?.continuations[id] = nil }
-        }
-        return stream
-    }
-
-    /// Recibe los eventos de forma síncrona, en el momento en que ocurren.
-    /// Útil cuando hay que reaccionar antes de que siga el código (por ejemplo, al salir).
+    /// Recibe los eventos de forma síncrona, en el momento en que ocurren, para que quien escucha
+    /// reaccione antes de que siga el código (por ejemplo, el aviso de fin al salir). Puede haber
+    /// varios oyentes: el ícono y los avisos.
     func observe(_ handler: @escaping (SessionEvent) -> Void) {
         observers.append(handler)
     }
@@ -182,9 +171,6 @@ final class SessionManager {
     private func emit(_ event: SessionEvent) {
         for observer in observers {
             observer(event)
-        }
-        for continuation in continuations.values {
-            continuation.yield(event)
         }
     }
 }

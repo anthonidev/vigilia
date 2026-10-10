@@ -93,8 +93,8 @@ struct SessionManagerTests {
         #expect(session.remaining == minutes(18))
     }
 
-    @Test func tickAfterEndExpiresSession() async {
-        var events = session.events().makeAsyncIterator()
+    @Test func tickAfterEndExpiresSession() {
+        let events = record()
         session.activate(.minutes(10))
         clock.advance(minutes: 10)
         session.tick()
@@ -102,8 +102,7 @@ struct SessionManagerTests {
         #expect(session.state == .inactive)
         #expect(session.remaining == nil)
         #expect(!power.isHeld)
-        #expect(await events.next() == .started(.minutes(10)))
-        #expect(await events.next() == .ended(.expired(at: clock.now)))
+        #expect(events.all == [.started(.minutes(10)), .ended(.expired(at: clock.now))])
     }
 
     @Test func indefiniteSessionNeverExpires() {
@@ -114,46 +113,47 @@ struct SessionManagerTests {
         #expect(session.isActive)
     }
 
-    @Test func deactivateReleasesAssertionAndEmitsEvent() async {
-        var events = session.events().makeAsyncIterator()
+    @Test func deactivateReleasesAssertionAndEmitsEvent() {
+        let events = record()
         session.activate(.minutes(30))
         session.deactivate()
 
         #expect(session.state == .inactive)
         #expect(!power.isHeld)
-        #expect(await events.next() == .started(.minutes(30)))
-        #expect(await events.next() == .ended(.deactivated))
+        #expect(events.all == [.started(.minutes(30)), .ended(.deactivated)])
     }
 
-    @Test func deactivateWhenInactiveEmitsNothing() async {
-        let stream = session.events()
+    @Test func deactivateWhenInactiveEmitsNothing() {
+        let events = record()
         session.deactivate()
-        session.activate(.minutes(10))
 
-        var events = stream.makeAsyncIterator()
-        #expect(await events.next() == .started(.minutes(10)))
+        #expect(events.all.isEmpty)
     }
 
-    @Test func changesEmitChangedEvent() async {
-        var events = session.events().makeAsyncIterator()
+    @Test func changesEmitChangedEvent() {
+        let events = record()
         session.activate(.minutes(30))
         session.extend(byMinutes: 30)
         session.set(minutes: 5)
         session.makeIndefinite()
 
-        #expect(await events.next() == .started(.minutes(30)))
-        #expect(await events.next() == .changed)
-        #expect(await events.next() == .changed)
-        #expect(await events.next() == .changed)
+        #expect(events.all == [.started(.minutes(30)), .changed, .changed, .changed])
     }
 
-    @Test func multipleListenersReceiveEvents() async {
-        var first = session.events().makeAsyncIterator()
-        var second = session.events().makeAsyncIterator()
+    @Test func multipleObserversReceiveEvents() {
+        let first = record()
+        let second = record()
         session.activate(.indefinite)
 
-        #expect(await first.next() == .started(.indefinite))
-        #expect(await second.next() == .started(.indefinite))
+        #expect(first.all == [.started(.indefinite)])
+        #expect(second.all == [.started(.indefinite)])
+    }
+
+    /// Guarda los eventos que emite la sesión, en orden.
+    private func record() -> EventRecorder {
+        let recorder = EventRecorder()
+        session.observe { recorder.all.append($0) }
+        return recorder
     }
 
     // MARK: - Aviso de los 10 minutos
@@ -218,4 +218,8 @@ struct SessionManagerTests {
 
         #expect(events.last == .ended(.deactivatedRemotely))
     }
+}
+
+final class EventRecorder {
+    var all: [SessionEvent] = []
 }

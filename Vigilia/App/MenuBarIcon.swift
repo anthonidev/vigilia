@@ -10,7 +10,6 @@ final class MenuBarIcon {
 
     @ObservationIgnored private let settings: AppSettings
     @ObservationIgnored private var animation: Task<Void, Never>?
-    @ObservationIgnored private var listener: Task<Void, Never>?
 
     nonisolated private static let duration = 3.0
     nonisolated private static let cycle = 1.2
@@ -19,14 +18,11 @@ final class MenuBarIcon {
 
     init(session: SessionManager, settings: AppSettings) {
         self.settings = settings
-        let events = session.events()
-        listener = Task { [weak self] in
-            for await event in events {
-                switch event {
-                case .started, .changed: self?.playAnimation()
-                case .ended: self?.stopAnimation()
-                case .tenMinutesLeft: break
-                }
+        session.observe { [weak self] event in
+            switch event {
+            case .started, .changed: self?.playAnimation()
+            case .ended: self?.stopAnimation()
+            case .tenMinutesLeft: break
             }
         }
     }
