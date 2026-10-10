@@ -274,7 +274,7 @@ Probado con el bot real el 2026-10-10. Los marcados con *(tests)* están cubiert
 - [ ] `/captura hd` → llega un PNG con la resolución nativa.
 - [ ] Con monitor externo → aparecen botones con los nombres reales, y **Todas** envía un álbum.
 - [x] Sin permiso → mensaje claro, sin errores ni cierres (tests).
-- [ ] Recompilar no hace perder el permiso (gracias a la firma estable).
+- [x] Recompilar no hace perder el permiso (gracias a la firma estable): una compilación de desarrollo nueva capturó la pantalla integrada a 3024×1964 (normal 609 KB, HD 1 MB, 0,13 s).
 
 ---
 
