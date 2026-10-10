@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import os
 
 /// Única fuente de verdad de la sesión. El menú y el bot solo llaman a estos métodos.
 ///
@@ -21,6 +22,7 @@ final class SessionManager {
     @ObservationIgnored private var warningArmed = false
 
     static let warningThreshold: TimeInterval = 10 * 60
+    private static let logger = Logger(subsystem: "com.tonis.vigilia", category: "session")
 
     init(timeSource: TimeSource = SystemTimeSource(), power: PowerAsserting = PowerAssertion()) {
         self.timeSource = timeSource
@@ -41,6 +43,7 @@ final class SessionManager {
         startTimer()
         refreshRemaining()
         armWarning()
+        Self.logger.info("Sesión iniciada: \(duration.label, privacy: .public)")
         emit(.started(duration))
     }
 
@@ -142,6 +145,7 @@ final class SessionManager {
         timerTask?.cancel()
         timerTask = nil
         power.release()
+        Self.logger.info("Sesión terminada: \(String(describing: reason), privacy: .public)")
         emit(.ended(reason))
     }
 

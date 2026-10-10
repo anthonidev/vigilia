@@ -28,6 +28,8 @@ final class TelegramBot {
     @ObservationIgnored private let screenshots: ScreenshotSender
 
     @ObservationIgnored private var pollTask: Task<Void, Never>?
+    /// Siguiente update a pedir. Se conserva al reconectar para no perder mensajes.
+    @ObservationIgnored private var offset: Int?
     @ObservationIgnored private var runningTokenRevision: Int?
     @ObservationIgnored private var isHandling = false
     @ObservationIgnored private var stopRequested = false
@@ -113,20 +115,35 @@ final class TelegramBot {
         }
     }
 
-    private func start() {
+    /// - Parameter discardPending: al encender el bot se descarta lo antiguo; al reconectar, no.
+    private func start(discardPending: Bool = true) {
         guard let value = try? token.load() else {
             status = .off
             return
         }
         let client = makeClient(value)
         runningTokenRevision = token.revision
-        status = .connecting
+        if discardPending {
+            Self.logger.info("Bot encendido")
+            status = .connecting
+        }
         pollTask = Task { [weak self] in
-            await self?.poll(client)
+            await self?.poll(client, discardPending: discardPending)
         }
     }
 
+    /// Tras despertar la Mac o recuperar la red: corta la petición colgada (o la espera entre
+    /// reintentos) y vuelve a pedir enseguida, sin descartar los mensajes pendientes.
+    func reconnectNow() {
+        guard pollTask != nil, !isHandling else { return }
+        Self.logger.info("Reconectando el bot")
+        pollTask?.cancel()
+        pollTask = nil
+        start(discardPending: false)
+    }
+
     private func stop() {
+        Self.logger.info("Bot apagado")
         pollTask?.cancel()
         pollTask = nil
         runningTokenRevision = nil
@@ -136,11 +153,10 @@ final class TelegramBot {
 
     // MARK: - Polling
 
-    private func poll(_ client: any TelegramClient) async {
-        var offset: Int?
+    private func poll(_ client: any TelegramClient, discardPending: Bool) async {
         var backoff: Duration = .seconds(1)
         var conflicts = 0
-        var prepared = false
+        var prepared = !discardPending
 
         while !Task.isCancelled, !stopRequested {
             do {

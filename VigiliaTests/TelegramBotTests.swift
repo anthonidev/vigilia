@@ -199,4 +199,19 @@ final class TelegramBotTests {
         #expect(await client.uploads.isEmpty)
         #expect(capturer.captured.isEmpty)
     }
+
+    @Test func reconnectKeepsPendingMessages() async {
+        let bot = startBot()
+        await client.enqueue(Updates.text("/estado", id: 5, from: Self.owner))
+        #expect(await eventually { await sent().count == 1 })
+        #expect(await eventually { await client.offsets.last == 6 })
+
+        bot.reconnectNow()
+        await client.enqueue(Updates.text("/estado", id: 6, from: Self.owner))
+
+        #expect(await eventually { await sent().count == 2 })
+        let offsets = await client.offsets
+        #expect(offsets.filter { $0 == -1 }.count == 1, "Solo se descarta la cola al encender, no al reconectar")
+        #expect(bot.status == .running)
+    }
 }

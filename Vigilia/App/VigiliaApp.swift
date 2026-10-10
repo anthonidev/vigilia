@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var model: AppModel?
     private var statusItem: StatusItemController?
     private var settingsWindow: SettingsWindowController?
+    private var systemEvents: SystemEventsMonitor?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Los tests usan la app como anfitrión: no hace falta ícono ni bot.
@@ -25,6 +26,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = StatusItemController(model: model) { settingsWindow.show() }
         self.model = model
         self.settingsWindow = settingsWindow
+        systemEvents = SystemEventsMonitor(
+            onWake: {
+                // Si la sesión caducó mientras dormía, se cierra ya (y sale el aviso de fin).
+                model.session.tick()
+                model.bot.reconnectNow()
+            },
+            onNetworkRestored: { model.bot.reconnectNow() }
+        )
 
         #if DEBUG
         DebugLaunch.apply(to: model.session, openSettings: settingsWindow.show)
