@@ -134,7 +134,7 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 - `AppSettings`: valores por defecto y persistencia (con un `UserDefaults(suiteName:)` aislado).
 
 ### Criterios de aceptación
-- [ ] El token aparece en **Acceso a Llaveros** bajo `com.tonis.vigilia` y no está en `UserDefaults`.
+- [x] El token aparece en **Acceso a Llaveros** bajo `com.tonis.vigilia` y no está en `UserDefaults`.
 - [x] Los interruptores se mantienen tras reiniciar la app.
 - [ ] **Iniciar con la Mac** aparece en Ajustes del Sistema → General → Ítems de inicio, y funciona al reiniciar sesión.
 - [x] La ventana de ajustes se abre al frente (comprobado con `-openSettings YES`, que usa el mismo `openSettings`).
@@ -142,7 +142,7 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 
 ---
 
-## Fase 3: Bot de Telegram (núcleo) 🟡 código listo, falta la prueba real
+## Fase 3: Bot de Telegram (núcleo) ✅
 
 **Objetivo:** controlar la sesión desde Telegram, de forma segura.
 
@@ -198,18 +198,18 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 - `AccountLinker`: código correcto, incorrecto, caducado y demasiados intentos.
 
 ### Criterios de aceptación
-Los marcados con *(tests)* están cubiertos con el Telegram falso; queda repetirlos con el bot real.
+Probado con el bot real el 2026-10-10. Los marcados con *(tests)* están cubiertos además con el Telegram falso.
 - [x] Con un token falso, la API real de Telegram responde 401 y la app lo trata como token inválido (la red funciona desde el sandbox).
-- [ ] Vincular la cuenta desde Ajustes funciona de principio a fin.
-- [ ] Con una sesión activa, todos los comandos de `IDEA.md` funcionan (excepto `/captura`).
-- [ ] Los botones `+30 min` y `Apagar` funcionan, y el botón deja de mostrar el reloj de carga.
+- [x] Vincular la cuenta desde Ajustes funciona de principio a fin.
+- [x] Con una sesión activa, todos los comandos de `IDEA.md` funcionan (excepto `/captura`).
+- [x] Los botones `+30 min` y `Apagar` funcionan, y el botón deja de mostrar el reloj de carga.
 - [x] (tests) Un mensaje desde otra cuenta no recibe respuesta.
 - [x] (tests) Al desactivar la sesión, el bot deja de responder.
 - [x] (tests) Un `/off` enviado con el bot apagado **no** afecta a la siguiente sesión.
 
 ---
 
-## Fase 4: Avisos automáticos 🟡 código listo, falta la prueba real
+## Fase 4: Avisos automáticos ✅
 
 **Objetivo:** el bot te informa sin que preguntes.
 
@@ -234,7 +234,7 @@ Los marcados con *(tests)* están cubiertos con el Telegram falso; queda repetir
 - [x] El aviso de fin ya está en marcha cuando `deactivate()` vuelve (lo que usa **Salir**).
 
 ### Criterios de aceptación
-- [ ] Los tres avisos llegan con sesiones reales cortas (por ejemplo, de 12 minutos con `/set 12m`).
+- [x] Los tres avisos llegan con sesiones reales cortas (por ejemplo, de 12 minutos con `/set 12m`).
 - [x] El aviso de fin sale aunque el bot se apague, porque no depende del polling.
 
 ---
