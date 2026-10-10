@@ -21,7 +21,7 @@ Detalle de cada fase. La visión general y las decisiones técnicas están en `P
   - Bundle ID: `com.tonis.vigilia`
   - Deployment target: macOS 27.0
   - Swift 6 con *strict concurrency* `complete`, *default actor isolation* = `MainActor` y *approachable concurrency*
-- [ ] Firma: *Automatically manage signing* ya está configurado. **Falta elegir el Team (Personal Team)** en Xcode → target Vigilia → Signing & Capabilities, después de añadir tu Apple ID en Xcode → Ajustes → Cuentas. Mientras tanto se firma localmente (ad-hoc).
+- [x] Firma: *Automatically manage signing* con el Personal Team (`RS79YL6DLM`) en la app y en los tests. La app se firma con el certificado *Apple Development* y el hardened runtime.
 - [x] Info.plist generado por Xcode (`INFOPLIST_KEY_*` en los build settings): `LSUIElement = YES` y `CFBundleDisplayName = Vigilia`.
 - [x] Entitlements (`Vigilia/Vigilia.entitlements`): App Sandbox y `com.apple.security.network.client`.
 - [x] Target `VigiliaTests` con Swift Testing y un test de humo.
