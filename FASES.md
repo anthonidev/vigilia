@@ -239,7 +239,7 @@ Probado con el bot real el 2026-10-10. Los marcados con *(tests)* están cubiert
 
 ---
 
-## Fase 5: Capturas remotas 🟡 código listo, falta la prueba real
+## Fase 5: Capturas remotas ✅
 
 **Objetivo:** ver tu pantalla desde el celular.
 
@@ -270,9 +270,9 @@ Probado con el bot real el 2026-10-10. Los marcados con *(tests)* están cubiert
 - [x] Bot: el botón Captura envía una foto; otra cuenta no puede pedir capturas.
 
 ### Criterios de aceptación
-- [ ] `/captura` con una pantalla → llega una foto legible al celular en pocos segundos.
-- [ ] `/captura hd` → llega un PNG con la resolución nativa.
-- [ ] Con monitor externo → aparecen botones con los nombres reales, y **Todas** envía un álbum.
+- [x] `/captura` con una pantalla → llega una foto legible al celular en pocos segundos.
+- [x] `/captura hd` → llega un PNG con la resolución nativa.
+- [ ] Con monitor externo → aparecen botones con los nombres reales, y **Todas** envía un álbum. *(Cubierto por tests; falta probarlo con un monitor externo real.)*
 - [x] Sin permiso → mensaje claro, sin errores ni cierres (tests).
 - [x] Recompilar no hace perder el permiso (gracias a la firma estable): una compilación de desarrollo nueva capturó la pantalla integrada a 3024×1964 (normal 609 KB, HD 1 MB, 0,13 s).
 
