@@ -4,6 +4,9 @@ import SwiftUI
 struct VigiliaApp: App {
     @State private var session: SessionManager
     @State private var icon: MenuBarIcon
+    @State private var settings = AppSettings()
+    @State private var token = TelegramTokenStore()
+    @State private var loginItem = LoginItem()
 
     init() {
         let session = SessionManager()
@@ -21,11 +24,13 @@ struct VigiliaApp: App {
         } label: {
             Image(nsImage: icon.image(active: session.isActive))
                 .accessibilityLabel(session.statusText)
+                #if DEBUG
+                .modifier(DebugLaunch.OpenSettingsOnLaunch())
+                #endif
         }
 
         Settings {
-            Text("La configuración llegará en la Fase 2.")
-                .padding(40)
+            SettingsView(settings: settings, token: token, loginItem: loginItem)
         }
     }
 }

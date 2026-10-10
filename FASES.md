@@ -106,37 +106,39 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 
 ---
 
-## Fase 2: Configuración
+## Fase 2: Configuración ✅
 
 **Objetivo:** una ventana de ajustes funcional, con el token guardado de forma segura.
 
 ### Tareas
-- [ ] `KeychainStore`: `save(token:)`, `loadToken()`, `deleteToken()` (`kSecClassGenericPassword`, servicio `com.tonis.vigilia`, cuenta `telegram-bot-token`).
-- [ ] `AppSettings` (`@Observable`, sobre `UserDefaults`):
+- [x] `KeychainStore`: `save(token:)`, `loadToken()`, `deleteToken()` (`kSecClassGenericPassword`, servicio `com.tonis.vigilia`, cuenta `telegram-bot-token`).
+- [x] `AppSettings` (`@Observable`, sobre `UserDefaults`):
   - `botEnabled: Bool` (por defecto `false`)
   - `notificationsEnabled: Bool` (por defecto `true`)
   - `authorizedUserID: Int64?`
   - `authorizedUserName: String?` (solo para mostrarlo)
-- [ ] `LoginItem`: un envoltorio de `SMAppService.mainApp` con `isEnabled` y `setEnabled(_:)`. El estado se lee del sistema, no se guarda en `UserDefaults`.
-- [ ] `SettingsView` (escena `Settings`, un `Form` agrupado):
+- [x] `TelegramTokenStore`: el token en el Keychain, con `hasToken` observable.
+- [x] `LoginItem`: un envoltorio de `SMAppService.mainApp` con `isEnabled` y `setEnabled(_:)`. El estado se lee del sistema, no se guarda en `UserDefaults`.
+- [x] `SettingsView` (escena `Settings`, un `Form` agrupado):
   - **Telegram**
-    - Token en un `SecureField`, con los botones **Guardar** y **Probar** (este último se habilita en la fase 3).
-    - Cuenta autorizada: "No vinculada" o "@usuario (id)", con **Vincular…** y **Desvincular** (el flujo llega en la fase 3).
+    - Token en un `SecureField` con **Guardar**; se valida el formato de BotFather y se puede **Borrar**. El botón **Probar** (`getMe`) llega en la fase 3.
+    - Cuenta autorizada: "No vinculada" o "@usuario (id)", con **Desvincular**. El botón **Vincular…** llega en la fase 3.
     - Interruptor **Activar bot**.
     - Interruptor **Avisos automáticos**.
   - **General**
     - Interruptor **Iniciar Vigilia al encender la Mac**.
-- [ ] Abrir Ajustes desde el menú con `SettingsLink` o `openSettings`, y además `NSApp.activate()`. Una app sin Dock no trae la ventana al frente por sí sola.
+- [x] Abrir Ajustes desde el menú con `SettingsLink` o `openSettings`, y además `NSApp.activate()`. Una app sin Dock no trae la ventana al frente por sí sola.
 
 ### Tests
 - `KeychainStore`: guardar, leer y borrar en un servicio de pruebas.
 - `AppSettings`: valores por defecto y persistencia (con un `UserDefaults(suiteName:)` aislado).
 
 ### Criterios de aceptación
-- El token aparece en **Acceso a Llaveros** bajo `com.tonis.vigilia` y no está en `UserDefaults`.
-- Los interruptores se mantienen tras reiniciar la app.
-- **Iniciar con la Mac** aparece en Ajustes del Sistema → General → Ítems de inicio, y funciona al reiniciar sesión.
-- La ventana de ajustes se abre al frente desde el menú.
+- [ ] El token aparece en **Acceso a Llaveros** bajo `com.tonis.vigilia` y no está en `UserDefaults`.
+- [x] Los interruptores se mantienen tras reiniciar la app.
+- [ ] **Iniciar con la Mac** aparece en Ajustes del Sistema → General → Ítems de inicio, y funciona al reiniciar sesión.
+- [x] La ventana de ajustes se abre al frente (comprobado con `-openSettings YES`, que usa el mismo `openSettings`).
+- Nota: hasta elegir el Team de firma, la firma cambia en cada compilación y macOS puede preguntar si Vigilia puede acceder a su ítem del Llavero. Con el Personal Team deja de pasar.
 
 ---
 
