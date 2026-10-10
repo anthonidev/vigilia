@@ -1,6 +1,7 @@
 # Vigilia: plan de desarrollo
 
-Basado en `IDEA.md`. App personal para la barra de menú de macOS, en Swift nativo.
+Basado en [`docs/IDEA.md`](../docs/IDEA.md). App personal para la barra de menú de macOS, en Swift nativo.
+El comportamiento del bot, común a todas las plataformas, está en [`docs/bot.md`](../docs/bot.md).
 
 ---
 
@@ -97,7 +98,7 @@ El detalle de cada fase (tareas, archivos, tests y criterios de aceptación) est
 
 ## 5. Limitaciones a tener en cuenta
 
-- Las de `IDEA.md` (tapa cerrada, pantalla bloqueada, sin cifrado de extremo a extremo).
+- Las de `docs/IDEA.md` (tapa cerrada, pantalla bloqueada, sin cifrado de extremo a extremo).
 - Las versiones recientes de macOS vuelven a preguntar cada cierto tiempo si se sigue permitiendo la Grabación de pantalla. Es un comportamiento del sistema y no se puede evitar.
 - Con el Apple ID gratis, el certificado dura un año. Xcode lo renueva al recompilar.
 

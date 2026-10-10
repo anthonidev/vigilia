@@ -201,7 +201,7 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 Probado con el bot real el 2026-10-10. Los marcados con *(tests)* están cubiertos además con el Telegram falso.
 - [x] Con un token falso, la API real de Telegram responde 401 y la app lo trata como token inválido (la red funciona desde el sandbox).
 - [x] Vincular la cuenta desde Ajustes funciona de principio a fin.
-- [x] Con una sesión activa, todos los comandos de `IDEA.md` funcionan (excepto `/captura`).
+- [x] Con una sesión activa, todos los comandos de `docs/IDEA.md` funcionan (excepto `/captura`).
 - [x] Los botones `+30 min` y `Apagar` funcionan, y el botón deja de mostrar el reloj de carga.
 - [x] (tests) Un mensaje desde otra cuenta no recibe respuesta.
 - [x] (tests) Al desactivar la sesión, el bot deja de responder.

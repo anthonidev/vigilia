@@ -1,5 +1,7 @@
 // Genera el ícono de la app: una taza con vapor sobre un cielo nocturno.
 //
+// Desde la carpeta macos/:
+//
 //     swift scripts/generate-icon.swift Vigilia/Assets.xcassets/AppIcon.appiconset
 import AppKit
 
