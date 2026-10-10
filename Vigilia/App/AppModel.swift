@@ -8,6 +8,7 @@ final class AppModel {
     let token: TelegramTokenStore
     let loginItem: LoginItem
     let linker: AccountLinker
+    let screenshots: ScreenshotService
     let bot: TelegramBot
     let notifier: SessionNotifier
 
@@ -18,7 +19,14 @@ final class AppModel {
         token = TelegramTokenStore()
         loginItem = LoginItem()
         linker = AccountLinker(settings: settings)
-        bot = TelegramBot(session: session, settings: settings, token: token, linker: linker)
+        screenshots = ScreenshotService()
+        bot = TelegramBot(
+            session: session,
+            settings: settings,
+            token: token,
+            linker: linker,
+            capturer: screenshots
+        )
         notifier = SessionNotifier(session: session, settings: settings, token: token) { [bot] reply in
             try await bot.notify(reply)
         }

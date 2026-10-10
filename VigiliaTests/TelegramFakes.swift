@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 import Observation
 @testable import Vigilia
@@ -56,6 +57,9 @@ actor FakeTelegramClient {
     private(set) var commandsSet = false
     /// Mensajes a los que se les quitaron los botones (chat, mensaje).
     private(set) var clearedKeyboards: [Int] = []
+    private(set) var uploads: [TelegramUpload] = []
+    private(set) var albums: [[TelegramUpload]] = []
+    private(set) var chatActions: [String] = []
 
     func setPending(_ updates: [TelegramUpdate]) { pending = updates }
     func setError(_ error: TelegramError?) { self.error = error }
@@ -97,6 +101,18 @@ extension FakeTelegramClient: TelegramClient {
 
     func setMyCommands(_ commands: [BotCommandDescription]) async throws {
         commandsSet = true
+    }
+
+    func send(_ upload: TelegramUpload, chatID: Int64) async throws {
+        uploads.append(upload)
+    }
+
+    func sendMediaGroup(_ uploads: [TelegramUpload], chatID: Int64) async throws {
+        albums.append(uploads)
+    }
+
+    func sendChatAction(_ action: String, chatID: Int64) async throws {
+        chatActions.append(action)
     }
 }
 
@@ -144,4 +160,40 @@ func eventually(
         try? await Task.sleep(for: .milliseconds(10))
     }
     return await condition()
+}
+
+/// Capturador falso: pantallas configurables e imágenes generadas del tamaño de cada una.
+final class FakeCapturer: ScreenCapturing {
+    var hasPermission = true
+    var screens: [DisplayInfo] = [DisplayInfo(id: 1, name: "Pantalla integrada")]
+    var size = (width: 3024, height: 1964)
+    private(set) var permissionRequested = false
+    private(set) var captured: [CGDirectDisplayID] = []
+
+    func requestPermission() {
+        permissionRequested = true
+    }
+
+    func displays() async throws -> [DisplayInfo] {
+        screens
+    }
+
+    func capture(_ displayID: CGDirectDisplayID) async throws -> CGImage {
+        guard screens.contains(where: { $0.id == displayID }) else { throw ScreenshotError.displayNotFound }
+        captured.append(displayID)
+        return TestImages.solid(width: size.width, height: size.height)
+    }
+}
+
+enum TestImages {
+    static func solid(width: Int, height: Int) -> CGImage {
+        let context = CGContext(
+            data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+            space: CGColorSpace(name: CGColorSpace.sRGB)!,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+        )!
+        context.setFillColor(CGColor(red: 0.2, green: 0.4, blue: 0.8, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        return context.makeImage()!
+    }
 }

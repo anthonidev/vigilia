@@ -19,6 +19,12 @@ nonisolated protocol TelegramClient: Sendable {
     func editMessageReplyMarkup(chatID: Int64, messageID: Int, keyboard: InlineKeyboardMarkup?) async throws
     func answerCallbackQuery(id: String, text: String?) async throws
     func setMyCommands(_ commands: [BotCommandDescription]) async throws
+    /// Envía una foto o un documento.
+    func send(_ upload: TelegramUpload, chatID: Int64) async throws
+    /// Envía varias fotos o documentos como un álbum (todos del mismo tipo, máximo 10).
+    func sendMediaGroup(_ uploads: [TelegramUpload], chatID: Int64) async throws
+    /// Muestra "enviando foto…" en el chat. `action`: "upload_photo" o "upload_document".
+    func sendChatAction(_ action: String, chatID: Int64) async throws
 }
 
 /// Cliente HTTP de la Bot API. El token forma parte de la URL, así que nunca se registran URLs ni errores con URL.
@@ -70,6 +76,37 @@ actor TelegramAPI: TelegramClient {
         let _: IgnoredResult = try await call("setMyCommands", SetMyCommands(commands: commands))
     }
 
+    func send(_ upload: TelegramUpload, chatID: Int64) async throws {
+        var form = MultipartFormData()
+        form.append(field: "chat_id", value: String(chatID))
+        if let caption = upload.caption {
+            form.append(field: "caption", value: caption)
+        }
+        form.append(file: upload.kind.rawValue, filename: upload.filename, mimeType: upload.mimeType, data: upload.data)
+
+        let method = upload.kind == .photo ? "sendPhoto" : "sendDocument"
+        let _: IgnoredResult = try await perform(multipart(method, form))
+    }
+
+    func sendMediaGroup(_ uploads: [TelegramUpload], chatID: Int64) async throws {
+        var form = MultipartFormData()
+        form.append(field: "chat_id", value: String(chatID))
+
+        let media = uploads.enumerated().map { index, upload in
+            InputMedia(type: upload.kind.rawValue, media: "attach://file\(index)", caption: upload.caption)
+        }
+        form.append(field: "media", value: String(decoding: try encoder.encode(media), as: UTF8.self))
+        for (index, upload) in uploads.enumerated() {
+            form.append(file: "file\(index)", filename: upload.filename, mimeType: upload.mimeType, data: upload.data)
+        }
+
+        let _: IgnoredResult = try await perform(multipart("sendMediaGroup", form))
+    }
+
+    func sendChatAction(_ action: String, chatID: Int64) async throws {
+        let _: IgnoredResult = try await call("sendChatAction", ChatAction(chatId: chatID, action: action))
+    }
+
     // MARK: - Privado
 
     private func call<Params: Encodable, Result: Decodable>(
@@ -82,7 +119,20 @@ actor TelegramAPI: TelegramClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try encoder.encode(params)
         request.timeoutInterval = requestTimeout
+        return try await perform(request)
+    }
 
+    /// Las subidas pueden tardar: una captura HD pesa varios MB.
+    private func multipart(_ method: String, _ form: MultipartFormData) -> URLRequest {
+        var request = URLRequest(url: baseURL.appending(path: method))
+        request.httpMethod = "POST"
+        request.setValue(form.contentType, forHTTPHeaderField: "Content-Type")
+        request.httpBody = form.data
+        request.timeoutInterval = 120
+        return request
+    }
+
+    private func perform<Result: Decodable>(_ request: URLRequest) async throws -> Result {
         let data: Data
         let response: URLResponse
         do {
@@ -134,5 +184,16 @@ actor TelegramAPI: TelegramClient {
 
     private struct SetMyCommands: Encodable {
         let commands: [BotCommandDescription]
+    }
+
+    private struct ChatAction: Encodable {
+        let chatId: Int64
+        let action: String
+    }
+
+    private struct InputMedia: Encodable {
+        let type: String
+        let media: String
+        let caption: String?
     }
 }

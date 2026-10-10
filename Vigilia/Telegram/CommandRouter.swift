@@ -24,6 +24,7 @@ nonisolated struct BotReply: Equatable, Sendable {
     nonisolated enum FollowUp: Equatable, Sendable {
         case none
         case deactivate
+        case screenshot(ScreenshotRequest)
     }
 }
 
@@ -69,8 +70,10 @@ struct CommandRouter {
                 followUp: .deactivate
             )
 
-        case .screenshot:
-            return BotReply(text: "📸 Las capturas de pantalla llegarán pronto.")
+        case .screenshot(let request):
+            guard session.isActive else { return BotReply(text: BotText.inactive) }
+            // La captura es asíncrona y la envía el bot; aquí no hay texto que responder.
+            return BotReply(text: "", followUp: .screenshot(request))
 
         case .help:
             return BotReply(text: BotText.help)

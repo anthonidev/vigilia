@@ -10,6 +10,7 @@ final class TelegramBotTests {
 
     let session = FakeSession()
     let client = FakeTelegramClient()
+    let capturer = FakeCapturer()
     let settings: AppSettings
     let token: TelegramTokenStore
     let linker: AccountLinker
@@ -31,7 +32,13 @@ final class TelegramBotTests {
 
     private func startBot() -> TelegramBot {
         let client = client
-        let bot = TelegramBot(session: session, settings: settings, token: token, linker: linker) { _ in client }
+        let bot = TelegramBot(
+            session: session,
+            settings: settings,
+            token: token,
+            linker: linker,
+            capturer: capturer
+        ) { _ in client }
         self.bot = bot
         return bot
     }
@@ -170,5 +177,26 @@ final class TelegramBotTests {
         let bot = startBot()
 
         #expect(await eventually { bot.status == .invalidToken })
+    }
+
+    @Test func screenshotButtonSendsPhoto() async {
+        _ = startBot()
+        await client.enqueue(Updates.button("shot", id: 1, from: Self.owner))
+
+        #expect(await eventually { await client.uploads.count == 1 })
+        #expect(await client.uploads.first?.kind == .photo)
+        #expect(await sent().isEmpty, "Una captura no lleva mensaje de texto aparte")
+    }
+
+    @Test func screenshotIgnoredForStrangers() async {
+        _ = startBot()
+        await client.enqueue(
+            Updates.text("/captura", id: 1, from: Self.stranger),
+            Updates.text("/estado", id: 2, from: Self.owner)
+        )
+
+        #expect(await eventually { await sent().count == 1 })
+        #expect(await client.uploads.isEmpty)
+        #expect(capturer.captured.isEmpty)
     }
 }

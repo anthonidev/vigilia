@@ -25,6 +25,7 @@ final class TelegramBot {
     @ObservationIgnored private let linker: AccountLinker
     @ObservationIgnored private let makeClient: (String) -> any TelegramClient
     @ObservationIgnored private let router: CommandRouter
+    @ObservationIgnored private let screenshots: ScreenshotSender
 
     @ObservationIgnored private var pollTask: Task<Void, Never>?
     @ObservationIgnored private var runningTokenRevision: Int?
@@ -42,6 +43,7 @@ final class TelegramBot {
         settings: AppSettings,
         token: TelegramTokenStore,
         linker: AccountLinker,
+        capturer: any ScreenCapturing,
         makeClient: @escaping (String) -> any TelegramClient = { TelegramAPI(token: $0) }
     ) {
         self.session = session
@@ -50,6 +52,7 @@ final class TelegramBot {
         self.linker = linker
         self.makeClient = makeClient
         router = CommandRouter(session: session)
+        screenshots = ScreenshotSender(capturer: capturer)
         observeConditions()
     }
 
@@ -247,11 +250,14 @@ final class TelegramBot {
 
     private func respond(to command: BotCommand, chatID: Int64, client: any TelegramClient) async {
         let reply = router.reply(to: command)
-        await send(reply, to: chatID, client: client)
+        if !reply.text.isEmpty {
+            await send(reply, to: chatID, client: client)
+        }
 
         switch reply.followUp {
         case .none: break
         case .deactivate: session.deactivate(remotely: true)
+        case .screenshot(let request): await screenshots.handle(request, chatID: chatID, client: client)
         }
     }
 

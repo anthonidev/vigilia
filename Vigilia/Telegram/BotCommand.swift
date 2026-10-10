@@ -7,7 +7,7 @@ nonisolated enum BotCommand: Equatable, Sendable {
     case set(minutes: Int)
     case indefinite
     case off
-    case screenshot(hd: Bool)
+    case screenshot(ScreenshotRequest)
     case help
     /// "Dejar terminar" en el aviso de los 10 minutos.
     case dismiss
@@ -54,7 +54,7 @@ nonisolated enum BotCommand: Equatable, Sendable {
         case "off":
             self = .off
         case "captura":
-            self = .screenshot(hd: argument.lowercased() == "hd")
+            self = .screenshot(ScreenshotRequest(hd: argument.lowercased() == "hd"))
         case "ayuda", "help":
             self = .help
         case "vincular", "start":
@@ -65,13 +65,15 @@ nonisolated enum BotCommand: Equatable, Sendable {
         }
     }
 
-    /// Analiza el `callback_data` de un botón: "ext:30", "off", "shot", "dismiss".
+    /// Analiza el `callback_data` de un botón: "ext:30", "off", "dismiss", "shot", "shot:<pantalla>:<calidad>".
     init?(callbackData: String) {
+        if let request = ScreenshotRequest(callbackData: callbackData) {
+            self = .screenshot(request)
+            return
+        }
         switch callbackData {
         case "off":
             self = .off
-        case "shot":
-            self = .screenshot(hd: false)
         case "dismiss":
             self = .dismiss
         default:

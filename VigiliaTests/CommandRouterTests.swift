@@ -64,6 +64,15 @@ struct CommandRouterTests {
         #expect(!session.isIndefinite)
     }
 
+    @Test func screenshotIsHandedToTheBot() {
+        let reply = router.reply(to: .screenshot(ScreenshotRequest(hd: true)))
+        #expect(reply.text.isEmpty)
+        #expect(reply.followUp == .screenshot(ScreenshotRequest(hd: true)))
+
+        session.isActive = false
+        #expect(router.reply(to: .screenshot(ScreenshotRequest())).followUp == .none)
+    }
+
     @Test func helpAndUnknown() {
         #expect(router.reply(to: .help).text.contains("/captura hd"))
         #expect(router.reply(to: .unknown).text.contains("/ayuda"))

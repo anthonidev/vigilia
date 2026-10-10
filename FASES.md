@@ -239,43 +239,42 @@ Probado con el bot real el 2026-10-10. Los marcados con *(tests)* están cubiert
 
 ---
 
-## Fase 5: Capturas remotas
+## Fase 5: Capturas remotas 🟡 código listo, falta la prueba real
 
 **Objetivo:** ver tu pantalla desde el celular.
 
 ### Tareas
-- [ ] `ScreenshotService` (`actor` o `@concurrent` para trabajar fuera del hilo principal):
-  - `hasPermission()`: `CGPreflightScreenCaptureAccess()`
-  - `requestPermission()`: `CGRequestScreenCaptureAccess()`
-  - `displays() -> [DisplayInfo]`: `SCShareableContent.current.displays`, con el nombre tomado de `NSScreen.localizedName` (emparejando por `CGDirectDisplayID`).
-  - `capture(display:) -> CGImage`: `SCScreenshotManager.captureImage` con un `SCContentFilter(display:excludingWindows: [])` y la resolución nativa (escala Retina).
-  - `encodeNormal(_:) -> Data`: escala el lado mayor a 2560 px y lo guarda como JPEG con calidad 0.75 (ImageIO). Debe ocupar menos de 10 MB y cumplir ancho + alto ≤ 10 000.
-  - `encodeHD(_:) -> Data`: PNG a resolución completa.
-- [ ] `TelegramAPI`:
-  - `sendPhoto(chatID:data:caption:)` (multipart)
-  - `sendDocument(chatID:data:filename:caption:)` (multipart)
-  - `sendMediaGroup(chatID:items:)` (multipart con `attach://`)
-  - `sendChatAction(.uploadPhoto)`, para mostrar "enviando foto…"
-- [ ] Flujo `/captura` o el botón **Captura**:
+- [x] `ScreenshotService` (`@MainActor`, `ScreenCapturing`):
+  - `hasPermission` / `requestPermission()`: `CGPreflightScreenCaptureAccess()` / `CGRequestScreenCaptureAccess()`
+  - `displays()`: las pantallas de `SCShareableContent`, con el nombre de `NSScreen.localizedName` (emparejando por `CGDirectDisplayID`), la principal primero.
+  - `capture(_:)`: `SCScreenshotManager.captureImage` a resolución nativa (`contentRect × pointPixelScale`), con el cursor.
+- [x] `ScreenshotEncoder` (`@concurrent`, fuera del hilo principal):
+  - `normal`: lado mayor ≤ 2560 px, JPEG con calidad 0.75.
+  - `hd`: PNG a resolución completa.
+- [x] `TelegramAPI`: `send(_:)` (`sendPhoto`/`sendDocument`), `sendMediaGroup` y `sendChatAction`, con `MultipartFormData`.
+- [x] `ScreenshotSender`, para `/captura` o el botón **Captura**:
   - Una pantalla → la captura y la envía.
-  - Varias pantallas → botones `[DELL U2723QE] [Pantalla integrada] [Todas]` con `callback_data` `shot:<id>:<n|hd>` / `shot:all:<n|hd>`.
+  - Varias pantallas → un botón por pantalla con su nombre, más **Todas** (`callback_data` `shot:<id>:<n|hd>` / `shot:all:<n|hd>`).
   - **Todas** → un álbum con `sendMediaGroup` (máximo 10).
   - El pie de foto indica la pantalla y la hora: "Pantalla integrada · 14:32".
-- [ ] `/captura hd` → el mismo flujo, pero enviado como documento PNG con el nombre `vigilia-2026-10-09-1432.png`.
-- [ ] Sin permiso: el bot responde "Falta el permiso de Grabación de pantalla. Dalo en la Mac: Ajustes del Sistema → Privacidad → Grabación de pantalla." y la Mac muestra la solicitud del sistema.
-- [ ] Ajustes: una fila **Grabación de pantalla: concedido / no concedido**, con un botón para abrir el panel del sistema.
+- [x] `/captura hd` → el mismo flujo, enviado como documento PNG `vigilia-2026-10-09-1432.png` (con `-1`, `-2`… si son varias).
+- [x] Sin permiso: el bot explica dónde darlo y la Mac muestra la solicitud del sistema.
+- [x] Pantalla desconectada entre la pregunta y el botón: el bot lo dice.
+- [x] Ajustes: sección **Capturas de pantalla** con *Concedido / No concedido*, **Conceder…** y un enlace a Ajustes del Sistema. Se vuelve a comprobar al volver a la app.
 
 ### Tests
-- `encodeNormal`: una imagen de 6016×3384 queda con el lado mayor ≤ 2560 y < 10 MB.
-- El cuerpo multipart se construye correctamente (cabeceras, separadores y `attach://`).
-- El análisis de `callback_data` de capturas.
+- [x] `ScreenshotEncoder`: una imagen 6016×3384 queda en 2560 px de lado mayor, < 10 MB, en JPEG. HD mantiene el tamaño y es PNG.
+- [x] `MultipartFormData`: cuerpo exacto.
+- [x] `callback_data` de capturas: ida y vuelta, y ≤ 64 bytes.
+- [x] `ScreenshotSender` con un capturador falso: sin permiso, una pantalla, HD, varias pantallas, elegida, todas y desconectada.
+- [x] Bot: el botón Captura envía una foto; otra cuenta no puede pedir capturas.
 
 ### Criterios de aceptación
-- `/captura` con una pantalla → llega una foto legible al celular en pocos segundos.
-- `/captura hd` → llega un PNG con la resolución nativa.
-- Con monitor externo → aparecen botones con los nombres reales, y **Todas** envía un álbum.
-- Sin permiso → mensaje claro, sin errores ni cierres.
-- Recompilar no hace perder el permiso (gracias a la firma estable).
+- [ ] `/captura` con una pantalla → llega una foto legible al celular en pocos segundos.
+- [ ] `/captura hd` → llega un PNG con la resolución nativa.
+- [ ] Con monitor externo → aparecen botones con los nombres reales, y **Todas** envía un álbum.
+- [x] Sin permiso → mensaje claro, sin errores ni cierres (tests).
+- [ ] Recompilar no hace perder el permiso (gracias a la firma estable).
 
 ---
 

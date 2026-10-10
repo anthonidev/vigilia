@@ -24,7 +24,8 @@ final class SettingsWindowController {
             token: model.token,
             loginItem: model.loginItem,
             linker: model.linker,
-            bot: model.bot
+            bot: model.bot,
+            screenshots: model.screenshots
         )
         let hosting = NSHostingController(rootView: view)
         // Que la ventana siga al contenido (por ejemplo, al mostrar el código de vinculación).

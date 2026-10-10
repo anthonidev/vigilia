@@ -6,6 +6,7 @@ struct SettingsView: View {
     let loginItem: LoginItem
     let linker: AccountLinker
     let bot: TelegramBot
+    let screenshots: ScreenshotService
 
     var body: some View {
         Form {
@@ -15,6 +16,10 @@ struct SettingsView: View {
                 Toggle("Activar bot", isOn: $settings.botEnabled)
                 Toggle("Avisos automáticos", isOn: $settings.notificationsEnabled)
                     .disabled(!settings.botEnabled)
+            }
+
+            Section("Capturas de pantalla") {
+                ScreenRecordingRow(screenshots: screenshots)
             }
 
             Section("General") {
@@ -243,6 +248,43 @@ private struct LinkingInstructions: View {
     }
 }
 
+// MARK: - Grabación de pantalla
+
+private struct ScreenRecordingRow: View {
+    let screenshots: ScreenshotService
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LabeledContent("Grabación de pantalla") {
+                if screenshots.hasPermission {
+                    Label("Concedido", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                } else {
+                    HStack {
+                        Text("No concedido").foregroundStyle(.secondary)
+                        Button("Conceder…") { screenshots.requestPermission() }
+                    }
+                }
+            }
+
+            if !screenshots.hasPermission {
+                HStack(spacing: 4) {
+                    Text("Solo hace falta para /captura.")
+                        .foregroundStyle(.secondary)
+                    Button("Abrir Ajustes del Sistema") { screenshots.openSystemSettings() }
+                        .buttonStyle(.link)
+                }
+                .font(.callout)
+            }
+        }
+        // Al volver de Ajustes del Sistema, la app se activa: es el momento de volver a mirar.
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            screenshots.refreshPermission()
+        }
+        .onAppear { screenshots.refreshPermission() }
+    }
+}
+
 // MARK: - Inicio con la Mac
 
 private struct LoginItemRow: View {
@@ -267,11 +309,11 @@ private struct LoginItemRow: View {
             if loginItem.requiresApproval {
                 HStack(spacing: 4) {
                     Text("Falta aprobarlo en Ítems de inicio.")
+                        .foregroundStyle(.secondary)
                     Button("Abrir Ajustes del Sistema") { loginItem.openSystemSettings() }
                         .buttonStyle(.link)
                 }
                 .font(.callout)
-                .foregroundStyle(.secondary)
             }
 
             if let error {

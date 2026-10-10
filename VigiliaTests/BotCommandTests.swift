@@ -11,9 +11,9 @@ struct BotCommandTests {
         ("/set 2h", .set(minutes: 120)),
         ("/indefinido", .indefinite),
         ("/off", .off),
-        ("/captura", .screenshot(hd: false)),
-        ("/captura hd", .screenshot(hd: true)),
-        ("/captura HD", .screenshot(hd: true)),
+        ("/captura", .screenshot(ScreenshotRequest(hd: false))),
+        ("/captura hd", .screenshot(ScreenshotRequest(hd: true))),
+        ("/captura HD", .screenshot(ScreenshotRequest(hd: true))),
         ("/ayuda", .help),
         ("/start", .help),
         ("/start 482913", .link(code: "482913")),
@@ -44,14 +44,16 @@ struct BotCommandTests {
         ("ext:30", BotCommand.extend(minutes: 30)),
         ("ext:120", .extend(minutes: 120)),
         ("off", .off),
-        ("shot", .screenshot(hd: false)),
+        ("shot", .screenshot(ScreenshotRequest())),
+        ("shot:all:hd", .screenshot(ScreenshotRequest(target: .all, hd: true))),
+        ("shot:69733382:n", .screenshot(ScreenshotRequest(target: .display(69_733_382), hd: false))),
         ("dismiss", .dismiss),
     ])
     func parsesCallbackData(data: String, expected: BotCommand) {
         #expect(BotCommand(callbackData: data) == expected)
     }
 
-    @Test(arguments: ["", "ext:", "ext:0", "ext:99999", "ext:abc", "rm -rf"])
+    @Test(arguments: ["", "ext:", "ext:0", "ext:99999", "ext:abc", "rm -rf", "shot:", "shot:all", "shot:x:n", "shot:1:4k"])
     func rejectsUnknownCallbackData(data: String) {
         #expect(BotCommand(callbackData: data) == nil)
     }
