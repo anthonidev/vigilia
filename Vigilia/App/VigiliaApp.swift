@@ -39,4 +39,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DebugLaunch.apply(to: model.session, openSettings: settingsWindow.show)
         #endif
     }
+
+    /// Al cerrar por cualquier vía (Salir, apagar la Mac, cerrar sesión…), desactiva la sesión
+    /// y espera hasta 5 s a que salga el aviso de fin por Telegram.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        guard let model else { return .terminateNow }
+        model.session.deactivate()
+        Task {
+            await model.notifier.flush(timeout: .seconds(5))
+            sender.reply(toApplicationShouldTerminate: true)
+        }
+        return .terminateLater
+    }
 }

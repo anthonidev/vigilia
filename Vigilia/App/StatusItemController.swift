@@ -8,9 +8,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let menu = NSMenu()
 
-    /// Cabeceras del menú abierto, para actualizarlas en vivo cada segundo.
+    /// Cabeceras del menú abierto, para actualizarlas en vivo.
     private weak var sessionHeader: NSMenuItem?
     private weak var botHeader: NSMenuItem?
+    /// Último texto mostrado: el tiempo restante cambia cada segundo, pero el texto solo cada minuto.
+    private var shownStatus: String?
+    private var shownBotStatus: String?
 
     init(model: AppModel, openSettings: @escaping () -> Void) {
         self.model = model
@@ -20,29 +23,35 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         menu.delegate = self
         menu.autoenablesItems = false
         statusItem.menu = menu
-        trackButton()
+        track { [weak self] in self?.updateIcon() }
+        track { [weak self] in self?.updateStatus() }
     }
 
     // MARK: - Ícono y tooltip
 
-    /// Redibuja el ícono y el tooltip cada vez que cambia algo que muestran.
-    private func trackButton() {
+    /// Ejecuta `update` ahora y cada vez que cambie algo de lo que lee.
+    private func track(_ update: @escaping @MainActor () -> Void) {
         withObservationTracking {
-            updateButton()
+            update()
         } onChange: { [weak self] in
-            Task { @MainActor in self?.trackButton() }
+            Task { @MainActor in self?.track(update) }
         }
     }
 
-    private func updateButton() {
-        guard let button = statusItem.button else { return }
-        let session = model.session
-        let status = session.statusText
+    /// Solo cuando cambia el estado, la animación o el estilo; no con cada segundo de la sesión.
+    private func updateIcon() {
+        statusItem.button?.image = model.icon.image(active: model.session.isActive)
+    }
 
-        button.image = model.icon.image(active: session.isActive)
-        button.toolTip = status
-        button.setAccessibilityLabel("Vigilia, \(status)")
+    private func updateStatus() {
+        let status = model.session.statusText
+        let botStatus = botStatus
+        guard status != shownStatus || botStatus != shownBotStatus else { return }
+        shownStatus = status
+        shownBotStatus = botStatus
 
+        statusItem.button?.toolTip = status
+        statusItem.button?.setAccessibilityLabel("Vigilia, \(status)")
         // Si el menú está abierto, actualiza también las cabeceras.
         sessionHeader?.title = status
         botHeader?.title = botStatus ?? ""
@@ -127,11 +136,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     @objc private func quit() {
-        model.session.deactivate()
-        // Da tiempo a que salga el aviso de fin por Telegram.
-        Task {
-            await model.notifier.flush(timeout: .seconds(5))
-            NSApplication.shared.terminate(nil)
-        }
+        // AppDelegate desactiva la sesión y espera al aviso de fin antes de cerrar.
+        NSApplication.shared.terminate(nil)
     }
 }

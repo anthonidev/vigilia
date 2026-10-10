@@ -50,6 +50,7 @@ private struct TokenRow: View {
     @State private var draft = ""
     @State private var message: Message?
     @State private var isTesting = false
+    @State private var testTask: Task<Void, Never>?
 
     private enum Message {
         case error(String)
@@ -116,9 +117,10 @@ private struct TokenRow: View {
     }
 
     private func test() {
+        // Una prueba nueva sustituye a la anterior, para que su temporizador no borre este mensaje.
+        testTask?.cancel()
         isTesting = true
-        Task {
-            defer { isTesting = false }
+        testTask = Task {
             do {
                 let me = try await bot.testToken()
                 message = .success("Conectado con \(me.displayName)")
@@ -129,7 +131,9 @@ private struct TokenRow: View {
             } catch {
                 message = .error("No se pudo comprobar el token.")
             }
+            isTesting = false
             try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled else { return }
             message = nil
         }
     }
