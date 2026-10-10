@@ -21,22 +21,9 @@
 		AA0000000000000000000007 /* VigiliaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VigiliaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		AA0000000000000000000050 /* Exceptions for "Vigilia" folder in "Vigilia" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Vigilia.entitlements,
-			);
-			target = AA0000000000000000000010 /* Vigilia */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		AA0000000000000000000004 /* Vigilia */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				AA0000000000000000000050 /* Exceptions for "Vigilia" folder in "Vigilia" target */,
-			);
 			path = Vigilia;
 			sourceTree = "<group>";
 		};

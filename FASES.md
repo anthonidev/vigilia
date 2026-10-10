@@ -46,40 +46,41 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 
 ---
 
-## Fase 1: Mantener despierta
+## Fase 1: Mantener despierta ✅
 
 **Objetivo:** la app ya es útil sin bot. Elige un tiempo y la Mac no se duerme.
 
 ### Tareas
 
 **Modelo (`Session/`)**
-- [ ] `SessionDuration`: `enum { case indefinite; case minutes(Int) }`, con la lista de opciones del menú (10 m, 30 m, 1 h, 2 h, 4 h, 8 h, 12 h, indefinido) y un texto para mostrar ("2 h", "Indefinido").
-- [ ] `SessionState`: `.inactive` o `.active(endDate: Date?)`, donde `nil` significa indefinida.
-- [ ] Protocolo `Clock` (`now: Date`) con una implementación real y otra falsa para tests.
-- [ ] `PowerAssertion`:
+- [x] `SessionDuration`: `enum { case indefinite; case minutes(Int) }`, con la lista de opciones del menú (10 m, 30 m, 1 h, 2 h, 4 h, 8 h, 12 h, indefinido) y un texto para mostrar ("2 h", "Indefinido").
+- [x] `SessionState`: `.inactive` o `.active(endDate: Date?)`, donde `nil` significa indefinida.
+- [x] Protocolo `Clock` (`now: Date`) con una implementación real y otra falsa para tests.
+- [x] `PowerAssertion`:
   - `acquire()`: `IOPMAssertionCreateWithName(kIOPMAssertionTypePreventUserIdleDisplaySleep, …, "Vigilia mantiene la Mac despierta")`
   - `release()`: `IOPMAssertionRelease`
   - Es idempotente (llamarla dos veces no duplica la aserción) y se libera también en `deinit`.
-- [ ] `SessionManager` (`@Observable`, `@MainActor`):
+- [x] `SessionManager` (`@Observable`, `@MainActor`):
   - `state`, `remaining: Duration?`, `isActive`
   - `activate(_ duration:)`: reemplaza cualquier sesión activa
   - `extend(by minutes:)`: suma tiempo; si es indefinida, no hace nada y devuelve `.alreadyIndefinite`
   - `set(_ minutes:)`: reemplaza el tiempo restante
   - `makeIndefinite()`, `deactivate()`
   - Un temporizador interno (un `Task` con `Task.sleep`) que comprueba la hora de fin y termina la sesión al llegar.
-  - Un `AsyncStream<SessionEvent>` de eventos (`.started`, `.extended`, `.tenMinutesLeft`, `.ended`) que usarán el bot y los avisos.
+  - Un `AsyncStream<SessionEvent>` de eventos (`.started`, `.changed`, `.ended(reason)`) que usarán el bot y los avisos; admite varios oyentes. `.tenMinutesLeft` se añade en la fase 4.
   - **La sesión guarda la hora de fin, no un contador.**
 
 **Interfaz (`App/`)**
-- [ ] `MenuContent`:
+- [x] `MenuContent`:
   - Si hay sesión activa: "Activa · quedan 1 h 23 min" (o "Activa · indefinida"), deshabilitado y como cabecera.
   - Las duraciones, con una marca en la elegida.
   - **Desactivar**, visible solo si hay sesión.
   - **Configuración…** (por ahora vacío).
   - **Salir**.
-- [ ] El ícono cambia: `cup.and.saucer` cuando está inactiva y `cup.and.saucer.fill` cuando está activa.
-- [ ] El tiempo restante se actualiza mientras el menú está abierto (con `TimelineView` o una actualización por minuto).
-- [ ] Al salir con una sesión activa, se libera la aserción.
+- [x] El ícono cambia: `cup.and.saucer` cuando está inactiva y `cup.and.saucer.fill` cuando está activa.
+- [x] El tiempo restante se actualiza cada segundo mientras hay sesión (`tick()`), y el menú lo refleja.
+- Nota: `MenuBarExtra` no permite poner un tooltip al ícono, así que el tiempo restante se ve en la cabecera del menú y en la etiqueta de accesibilidad del ícono.
+- [x] Al salir con una sesión activa, se libera la aserción.
 
 ### Tests (`VigiliaTests/SessionManagerTests.swift`)
 - Activar 30 m → activa, con fin = ahora + 30 m.
@@ -90,10 +91,11 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 - `deactivate` libera la aserción (con un `PowerAssertion` falso detrás de un protocolo).
 
 ### Criterios de aceptación
-- Con una sesión activa, `pmset -g assertions` muestra la aserción de Vigilia `PreventUserIdleDisplaySleep`.
-- Al desactivar o al acabarse el tiempo, la aserción desaparece.
-- Con una sesión de 10 min, la pantalla no se apaga aunque el apagado de pantalla esté configurado en 2 min.
-- Todos los tests pasan.
+- [x] Test de integración `PowerAssertionTests`: con la aserción real, el sistema registra la de Vigilia y la quita al liberarla.
+- [ ] Con una sesión activa, `pmset -g assertions` muestra la aserción de Vigilia `PreventUserIdleDisplaySleep`.
+- [ ] Al desactivar o al acabarse el tiempo, la aserción desaparece.
+- [ ] Con una sesión de 10 min, la pantalla no se apaga aunque el apagado de pantalla esté configurado en 2 min.
+- [x] Todos los tests pasan (22).
 
 ### Pruebas manuales
 1. Activar 10 min y comprobar la aserción con `pmset -g assertions | grep -i vigilia`.
