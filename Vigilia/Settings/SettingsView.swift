@@ -146,7 +146,9 @@ private struct AccountRow: View {
             LabeledContent("Cuenta autorizada") {
                 if let id = settings.authorizedUserID, !linker.isLinking {
                     HStack {
-                        Text(settings.authorizedUserName.map { "@\($0) (\(id))" } ?? "\(id)")
+                        // `verbatim`: si no, SwiftUI formatea el ID con separador de miles.
+                        Text(verbatim: settings.authorizedUserName.map { "@\($0)" } ?? String(id))
+                            .help(Text(verbatim: "ID de Telegram: \(id)"))
                         Button("Desvincular", role: .destructive) {
                             settings.unlinkAccount()
                         }

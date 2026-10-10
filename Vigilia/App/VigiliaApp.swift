@@ -2,39 +2,32 @@ import SwiftUI
 
 @main
 struct VigiliaApp: App {
-    @State private var model = AppModel()
-
-    init() {
-        #if DEBUG
-        DebugLaunch.apply(to: model.session)
-        #endif
-    }
+    @NSApplicationDelegateAdaptor private var appDelegate: AppDelegate
 
     var body: some Scene {
-        MenuBarExtra {
-            MenuContent(
-                session: model.session,
-                bot: model.bot,
-                settings: model.settings,
-                token: model.token,
-                notifier: model.notifier
-            )
-        } label: {
-            Image(nsImage: model.icon.image(active: model.session.isActive))
-                .accessibilityLabel(model.session.statusText)
-                #if DEBUG
-                .modifier(DebugLaunch.OpenSettingsOnLaunch())
-                #endif
-        }
+        // La barra de menú y los ajustes los gestiona AppDelegate con AppKit.
+        // SwiftUI exige al menos una escena; sin menú de app, esta nunca se abre.
+        Settings { EmptyView() }
+    }
+}
 
-        Settings {
-            SettingsView(
-                settings: model.settings,
-                token: model.token,
-                loginItem: model.loginItem,
-                linker: model.linker,
-                bot: model.bot
-            )
-        }
+final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var model: AppModel?
+    private var statusItem: StatusItemController?
+    private var settingsWindow: SettingsWindowController?
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        // Los tests usan la app como anfitrión: no hace falta ícono ni bot.
+        guard ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] == nil else { return }
+
+        let model = AppModel()
+        let settingsWindow = SettingsWindowController(model: model)
+        statusItem = StatusItemController(model: model) { settingsWindow.show() }
+        self.model = model
+        self.settingsWindow = settingsWindow
+
+        #if DEBUG
+        DebugLaunch.apply(to: model.session, openSettings: settingsWindow.show)
+        #endif
     }
 }

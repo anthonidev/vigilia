@@ -79,7 +79,7 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
   - **Salir**.
 - [x] El ícono cambia: `cup.and.saucer` cuando está inactiva y `cup.and.saucer.fill` cuando está activa.
 - [x] El tiempo restante se actualiza cada segundo mientras hay sesión (`tick()`), y el menú lo refleja.
-- Nota: `MenuBarExtra` no permite poner un tooltip al ícono, así que el tiempo restante se ve en la cabecera del menú y en la etiqueta de accesibilidad del ícono.
+- [x] Tooltip con el tiempo restante al pasar el cursor. Para eso, el ícono y el menú usan AppKit (`StatusItemController`: `NSStatusItem` + `NSMenu`) en vez de `MenuBarExtra`, que no lo permite. Los ajustes son una ventana propia con SwiftUI (`SettingsWindowController`). El menú abierto se actualiza en vivo cada segundo.
 - [x] Al salir con una sesión activa, se libera la aserción.
 - [x] **Animación del vapor** (`CupIcon`, `MenuBarIcon`): al iniciar o cambiar una sesión, el vapor sube unos 3 s desde la taza y se desvanece. Se dibuja cuadro a cuadro (~20 fps), porque el ícono de la barra no admite animaciones de SwiftUI. No se anima si está activado "Reducir movimiento".
 - [x] Solo en Debug: `open Vigilia.app --args -activate 10` (o `indefinite`) inicia una sesión al arrancar, para probar sin hacer clic.
@@ -291,14 +291,14 @@ Probado con el bot real el 2026-10-10. Los marcados con *(tests)* están cubiert
 - [ ] **Accesibilidad:** etiquetas de VoiceOver en el ícono ("Vigilia, activa, quedan 1 h 20 min").
 - [ ] **Ícono de la app:** un ícono simple de taza para Ajustes y el Finder.
 - [ ] **Registro:** `Logger` (`os`) con el subsistema `com.tonis.vigilia` y categorías `session`, `telegram`, `screenshot`. **El token nunca se registra.**
-- [ ] **Instalación:** un script `scripts/install.sh` que compila en Release y copia `Vigilia.app` a `/Applications`.
+- [x] **Instalación:** `scripts/install.sh` compila en Release, cierra cualquier copia abierta y copia `Vigilia.app` a `/Applications` (adelantado antes de la fase 5).
 - [ ] Revisar todos los textos (español, tono consistente).
 - [ ] Un `README.md` con la configuración inicial (BotFather → token → vincular → permisos).
 
 ### Criterios de aceptación
 - Prueba de un día real: sesiones largas, la Mac dormida y despertada, el Wi-Fi apagado y encendido. El bot siempre se recupera sin reiniciar la app.
 - En Consola.app se ven los registros por categoría y en ninguno aparece el token.
-- `scripts/install.sh` deja la app instalada y funcionando desde `/Applications`.
+- [x] `scripts/install.sh` deja la app instalada y funcionando desde `/Applications`.
 
 ---
 
