@@ -81,6 +81,8 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 - [x] El tiempo restante se actualiza cada segundo mientras hay sesión (`tick()`), y el menú lo refleja.
 - Nota: `MenuBarExtra` no permite poner un tooltip al ícono, así que el tiempo restante se ve en la cabecera del menú y en la etiqueta de accesibilidad del ícono.
 - [x] Al salir con una sesión activa, se libera la aserción.
+- [x] **Animación del vapor** (`CupIcon`, `MenuBarIcon`): al iniciar o cambiar una sesión, el vapor sube unos 3 s desde la taza y se desvanece. Se dibuja cuadro a cuadro (~20 fps), porque el ícono de la barra no admite animaciones de SwiftUI. No se anima si está activado "Reducir movimiento".
+- [x] Solo en Debug: `open Vigilia.app --args -activate 10` (o `indefinite`) inicia una sesión al arrancar, para probar sin hacer clic.
 
 ### Tests (`VigiliaTests/SessionManagerTests.swift`)
 - Activar 30 m → activa, con fin = ahora + 30 m.
@@ -92,7 +94,7 @@ open build/DerivedData/Build/Products/Debug/Vigilia.app
 
 ### Criterios de aceptación
 - [x] Test de integración `PowerAssertionTests`: con la aserción real, el sistema registra la de Vigilia y la quita al liberarla.
-- [ ] Con una sesión activa, `pmset -g assertions` muestra la aserción de Vigilia `PreventUserIdleDisplaySleep`.
+- [x] Con una sesión activa, `pmset -g assertions` muestra la aserción de Vigilia `PreventUserIdleDisplaySleep`.
 - [ ] Al desactivar o al acabarse el tiempo, la aserción desaparece.
 - [ ] Con una sesión de 10 min, la pantalla no se apaga aunque el apagado de pantalla esté configurado en 2 min.
 - [x] Todos los tests pasan (22).
