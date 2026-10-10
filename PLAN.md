@@ -8,7 +8,7 @@ Basado en `IDEA.md`. App personal para la barra de menú de macOS, en Swift nati
 
 | Tema | Decisión | Motivo |
 |---|---|---|
-| Lenguaje / UI | Swift 6 + SwiftUI (`MenuBarExtra` + escena `Settings`) | Nativo, poco código, menú y ajustes resueltos por el sistema |
+| Lenguaje / UI | Swift 6; barra de menú con AppKit (`NSStatusItem` + `NSMenu`), ajustes con SwiftUI | `MenuBarExtra` no permite tooltip en el ícono; SwiftUI sigue siendo lo más simple para el formulario |
 | macOS mínimo | macOS 27 | Es la versión que usas; no hace falta soportar versiones antiguas |
 | Proyecto | Proyecto de Xcode, **sin dependencias externas** | Telegram se usa con `URLSession`; no hace falta ninguna librería |
 | Sin Dock | `LSUIElement = YES` en Info.plist | Solo vive en la barra de menú |
@@ -17,40 +17,62 @@ Basado en `IDEA.md`. App personal para la barra de menú de macOS, en Swift nati
 | Mantener despierta | `IOPMAssertionCreateWithName` con `PreventUserIdleDisplaySleep` | Evita que se apaguen la pantalla y el sistema; se libera al terminar |
 | Telegram | Long polling con `getUpdates` (timeout 50 s) | No hay que abrir puertos; se para solo con cancelar la tarea |
 | Token | Keychain | Guardado seguro, como pide la idea |
-| Otros ajustes | `UserDefaults` / `@AppStorage` | Simple |
+| Otros ajustes | `UserDefaults`, envuelto en `AppSettings` (`@Observable`) | Simple, observable y testeable con un `UserDefaults` aislado |
 | Capturas | ScreenCaptureKit (`SCScreenshotManager`) | API actual de Apple; la anterior (`CGWindowListCreateImage`) está obsoleta |
 | Inicio con la Mac | `SMAppService.mainApp` | API actual, sin helper aparte |
-| Tests | Swift Testing | Para la lógica pura: parser, sesión y comandos |
+| Concurrencia | Swift 6 estricto, `MainActor` por defecto; trabajo pesado con `@concurrent` | Sin carreras de datos; la codificación de capturas no bloquea la interfaz |
+| Tests | Swift Testing | Lógica pura, más el bot completo con un Telegram y un capturador falsos |
 
 ## 2. Arquitectura
 
 ```
 Vigilia/
-├── App/
-│   ├── VigiliaApp.swift          // @main: MenuBarExtra + Settings
-│   └── MenuContent.swift         // Opciones del menú desplegable
-├── Session/
-│   ├── SessionManager.swift      // @Observable @MainActor: estado, fin, activar/ampliar/fijar/desactivar
-│   ├── SessionDuration.swift     // enum: .indefinite / .minutes(n)
-│   └── PowerAssertion.swift      // Envuelve IOKit (crear/liberar aserción)
+├── App/                          // Composición y barra de menú
+│   ├── VigiliaApp.swift          // @main y AppDelegate: crea todo y gestiona el cierre
+│   ├── AppModel.swift            // Construye y conecta las piezas (raíz de composición)
+│   ├── StatusItemController.swift// Ícono, tooltip y menú (AppKit)
+│   ├── MenuBarIcon.swift         // Animación del ícono al activar
+│   ├── MenuBarIconRenderer.swift // Estilos (taza, llama, foco) y sus dibujos
+│   ├── StatusText.swift          // Textos de estado de la sesión y del bot
+│   ├── SystemEventsMonitor.swift // Despertar la Mac y vuelta de la red
+│   └── DebugLaunch.swift         // Solo Debug: atajos de arranque
+├── Session/                      // Dominio: no depende de nada más
+│   ├── SessionManager.swift      // Única fuente de verdad: activar, ampliar, fijar, desactivar, eventos
+│   ├── SessionDuration.swift     // Duración, estado, eventos y motivos de fin
+│   ├── DurationText.swift        // "1 h 30 min"
+│   ├── TimeSource.swift          // Reloj inyectable
+│   └── PowerAssertion.swift      // Aserción de energía de IOKit
 ├── Telegram/
-│   ├── TelegramAPI.swift         // Cliente HTTP: getUpdates, sendMessage, sendPhoto, sendDocument, sendMediaGroup…
-│   ├── TelegramModels.swift      // Codable: Update, Message, CallbackQuery, InlineKeyboard…
-│   ├── TelegramBot.swift         // Bucle de polling, filtra por usuario autorizado, enruta comandos
-│   ├── CommandRouter.swift       // Comando → acción sobre SessionManager / capturas
-│   ├── DurationParser.swift      // "30m", "1h", "1h30m", "90" → minutos
-│   └── AccountLinker.swift       // Código de vinculación de la cuenta
+│   ├── TelegramAPI.swift         // Cliente HTTP (actor) + protocolo TelegramClient
+│   ├── TelegramModels.swift      // Codable de la Bot API
+│   ├── MultipartFormData.swift   // Subida de archivos
+│   ├── TelegramBot.swift         // Ciclo de vida y polling: cuándo encender, reconectar, apagar
+│   ├── BotUpdateHandler.swift    // Cada mensaje: autorizar, vincular, responder, capturar
+│   ├── BotCommand.swift          // Texto o botón → comando
+│   ├── CommandRouter.swift       // Comando → acción sobre la sesión + respuesta (y textos del bot)
+│   ├── DurationParser.swift      // "30m", "1h30m", "90" → minutos
+│   ├── AccountLinker.swift       // Código de vinculación
+│   └── SessionNotifier.swift     // Avisos automáticos
 ├── Screenshot/
-│   └── ScreenshotService.swift   // Lista pantallas, captura, codifica JPEG/PNG
-├── Settings/
-│   ├── SettingsView.swift
-│   ├── AppSettings.swift         // @AppStorage: bot activo, avisos, ID autorizado…
-│   ├── KeychainStore.swift
-│   └── LoginItem.swift           // SMAppService
-└── VigiliaTests/
+│   ├── ScreenshotService.swift   // Permiso, pantallas y captura (ScreenCaptureKit)
+│   ├── ScreenshotEncoder.swift   // JPEG/PNG fuera del hilo principal
+│   ├── ScreenshotRequest.swift   // Qué capturar y con qué calidad
+│   └── ScreenshotSender.swift    // Flujo de /captura
+└── Settings/
+    ├── SettingsWindowController.swift // Ventana propia que aloja la vista SwiftUI
+    ├── SettingsView.swift        // Formulario de ajustes
+    ├── AppSettings.swift         // UserDefaults observable
+    ├── TelegramTokenStore.swift  // Token en el Keychain
+    ├── KeychainStore.swift
+    └── LoginItem.swift           // SMAppService
 ```
 
-**Flujo central:** `SessionManager` es la única fuente de verdad. El menú y el bot solo llaman a sus métodos y observan su estado. Cuando la sesión se activa o termina, `SessionManager` enciende o apaga el bot (si está habilitado) y la aserción de energía.
+**Flujo central:**
+- `SessionManager` es la única fuente de verdad. El menú y el bot solo llaman a sus métodos.
+- Quien necesita reaccionar a la sesión la observa:
+  - El **bot** observa (con Observation) si debe estar encendido: hay token, cuenta y sesión, o se está vinculando una cuenta. Se enciende y se apaga solo.
+  - El **ícono** y los **avisos** reciben los eventos de la sesión (`observe`) de forma síncrona.
+- Las dependencias van hacia dentro: `Session/` no conoce a nadie. `Telegram/` usa la sesión a través del protocolo `SessionControlling` y las capturas a través de `ScreenCapturing`, para poder usar falsos en los tests. `AppModel` es el único sitio que conecta las piezas reales.
 
 ## 3. Fases
 
