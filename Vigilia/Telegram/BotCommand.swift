@@ -9,6 +9,8 @@ nonisolated enum BotCommand: Equatable, Sendable {
     case off
     case screenshot(hd: Bool)
     case help
+    /// "Dejar terminar" en el aviso de los 10 minutos.
+    case dismiss
     /// `/vincular 123456`, o `/start 123456` desde el enlace de Ajustes.
     case link(code: String)
     /// Comando conocido con un argumento que falta o no se entiende.
@@ -63,13 +65,15 @@ nonisolated enum BotCommand: Equatable, Sendable {
         }
     }
 
-    /// Analiza el `callback_data` de un botón: "ext:30", "off", "shot".
+    /// Analiza el `callback_data` de un botón: "ext:30", "off", "shot", "dismiss".
     init?(callbackData: String) {
         switch callbackData {
         case "off":
             self = .off
         case "shot":
             self = .screenshot(hd: false)
+        case "dismiss":
+            self = .dismiss
         default:
             guard let minutes = callbackData.wholeMatch(of: /ext:(\d+)/).flatMap({ Int($0.1) }),
                   (1...DurationParser.maxMinutes).contains(minutes)

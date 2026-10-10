@@ -12,7 +12,13 @@ struct VigiliaApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            MenuContent(session: model.session, bot: model.bot, settings: model.settings, token: model.token)
+            MenuContent(
+                session: model.session,
+                bot: model.bot,
+                settings: model.settings,
+                token: model.token,
+                notifier: model.notifier
+            )
         } label: {
             Image(nsImage: model.icon.image(active: model.session.isActive))
                 .accessibilityLabel(model.session.statusText)

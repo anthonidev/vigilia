@@ -45,6 +45,7 @@ struct BotCommandTests {
         ("ext:120", .extend(minutes: 120)),
         ("off", .off),
         ("shot", .screenshot(hd: false)),
+        ("dismiss", .dismiss),
     ])
     func parsesCallbackData(data: String, expected: BotCommand) {
         #expect(BotCommand(callbackData: data) == expected)

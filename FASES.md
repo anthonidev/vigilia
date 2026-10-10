@@ -209,30 +209,33 @@ Los marcados con *(tests)* están cubiertos con el Telegram falso; queda repetir
 
 ---
 
-## Fase 4: Avisos automáticos
+## Fase 4: Avisos automáticos 🟡 código listo, falta la prueba real
 
 **Objetivo:** el bot te informa sin que preguntes.
 
 ### Tareas
-- [ ] `SessionNotifier` escucha el `AsyncStream<SessionEvent>`:
+- [x] `SessionNotifier` escucha la sesión (de forma síncrona, con `SessionManager.observe`):
   - `.started` → "☕ Vigilia activa por 2 h", con botones de control (o "…de forma indefinida").
   - `.tenMinutesLeft` → "⏳ Quedan 10 min. ¿Ampliar?", con `[+30 min] [+1 h] [+2 h] [Dejar terminar]`.
-  - `.ended` → "😴 Sesión terminada. Tu Mac ya puede dormir."
-- [ ] `SessionManager` emite `.tenMinutesLeft` una sola vez por sesión, y solo si quedaban más de 10 min. Si se amplía por encima de 10 min, el aviso se rearma.
-- [ ] Orden al terminar: **enviar el aviso → esperar a que se envíe (máx. 5 s) → parar el bot**.
-- [ ] Al pulsar un botón de un aviso, se quitan los botones de ese mensaje con `editMessageReplyMarkup`, para no pulsarlos dos veces.
-- [ ] Se respeta `notificationsEnabled`.
-- [ ] Si la sesión termina mientras la Mac duerme, se envía el aviso de fin al despertar (con una nota de que terminó a las HH:MM).
+  - `.ended` → "😴 Sesión terminada. Tu Mac ya puede dormir." (o "desactivada desde la Mac").
+- [x] `SessionManager` emite `.tenMinutesLeft` una sola vez por sesión, y solo si quedaban más de 10 min. Si se amplía por encima de 10 min, el aviso se rearma.
+- [x] Los avisos se envían con un cliente propio, sin depender del polling. Así el aviso de fin sale aunque el bot ya se haya apagado y no importa el orden. Al pulsar **Salir**, la app espera hasta 5 s a que salga el aviso.
+- [x] Un `/off` desde Telegram no genera aviso de fin: el bot ya respondió (`SessionEndReason.deactivatedRemotely`).
+- [x] Al pulsar cualquier botón, se quitan los botones de ese mensaje con `editMessageReplyMarkup`. La respuesta trae botones nuevos.
+- [x] Se respeta `notificationsEnabled`, además de que el bot esté activado y la cuenta vinculada.
+- [x] Si la sesión termina mientras la Mac duerme, el aviso sale al despertar e indica a qué hora terminó. Si la red aún no está lista, se reintenta a los 5 y 15 s.
 
 ### Tests
-- Activar 30 m y avanzar el reloj 20 m → `.tenMinutesLeft` se emite una vez.
-- Activar 10 m → no se emite.
-- Ampliar después del aviso → se rearma.
-- Con los avisos desactivados → no se envía nada.
+- [x] Activar 30 m y avanzar el reloj 20 m → `.tenMinutesLeft` se emite una vez.
+- [x] Activar 10 m → no se emite.
+- [x] Ampliar después del aviso → se rearma.
+- [x] Dormir más allá del final → no hay aviso de 10 min; el de fin lleva la hora real.
+- [x] Con los avisos o el bot desactivados, o sin cuenta, no se envía nada.
+- [x] El aviso de fin ya está en marcha cuando `deactivate()` vuelve (lo que usa **Salir**).
 
 ### Criterios de aceptación
-- Los tres avisos llegan con sesiones reales cortas (por ejemplo, de 12 minutos con `/set 12m`).
-- El aviso de fin siempre llega antes de que el bot se apague.
+- [ ] Los tres avisos llegan con sesiones reales cortas (por ejemplo, de 12 minutos con `/set 12m`).
+- [x] El aviso de fin sale aunque el bot se apague, porque no depende del polling.
 
 ---
 

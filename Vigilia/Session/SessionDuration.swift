@@ -32,16 +32,21 @@ nonisolated enum SessionState: Equatable, Sendable {
 }
 
 nonisolated enum SessionEndReason: Equatable, Sendable {
-    /// El tiempo se acabó.
-    case expired
-    /// Se desactivó a mano, desde el menú o el bot.
+    /// El tiempo se acabó. Lleva la hora de fin prevista, que puede ser anterior
+    /// si la Mac estaba dormida.
+    case expired(at: Date)
+    /// Se desactivó desde la Mac.
     case deactivated
+    /// Se desactivó desde Telegram (el bot ya respondió, no hace falta avisar).
+    case deactivatedRemotely
 }
 
 nonisolated enum SessionEvent: Equatable, Sendable {
     case started(SessionDuration)
     /// El tiempo restante cambió (ampliado, reemplazado o pasado a indefinido).
     case changed
+    /// Quedan 10 minutos. Solo una vez por sesión, y solo si tenía más de 10 minutos por delante.
+    case tenMinutesLeft
     case ended(SessionEndReason)
 }
 

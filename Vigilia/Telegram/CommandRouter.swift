@@ -8,7 +8,7 @@ protocol SessionControlling: AnyObject {
     @discardableResult func extend(byMinutes minutes: Int) -> ExtendResult
     func set(minutes: Int)
     func makeIndefinite()
-    func deactivate()
+    func deactivate(remotely: Bool)
 }
 
 extension SessionManager: SessionControlling {}
@@ -75,6 +75,9 @@ struct CommandRouter {
         case .help:
             return BotReply(text: BotText.help)
 
+        case .dismiss:
+            return BotReply(text: "👍 Vale, la sesión terminará a su hora.")
+
         case .link:
             return BotReply(text: "Tu cuenta ya está vinculada.")
 
@@ -111,6 +114,18 @@ nonisolated enum BotKeyboards {
         [
             InlineKeyboardButton(text: "Apagar", callbackData: "off"),
             InlineKeyboardButton(text: "Captura", callbackData: "shot"),
+        ],
+    ])
+
+    /// Botones del aviso de los 10 minutos.
+    static let tenMinutesLeft = InlineKeyboardMarkup(inlineKeyboard: [
+        [
+            InlineKeyboardButton(text: "+30 min", callbackData: "ext:30"),
+            InlineKeyboardButton(text: "+1 h", callbackData: "ext:60"),
+            InlineKeyboardButton(text: "+2 h", callbackData: "ext:120"),
+        ],
+        [
+            InlineKeyboardButton(text: "Dejar terminar", callbackData: "dismiss"),
         ],
     ])
 }

@@ -9,6 +9,7 @@ final class AppModel {
     let loginItem: LoginItem
     let linker: AccountLinker
     let bot: TelegramBot
+    let notifier: SessionNotifier
 
     init() {
         session = SessionManager()
@@ -18,5 +19,8 @@ final class AppModel {
         loginItem = LoginItem()
         linker = AccountLinker(settings: settings)
         bot = TelegramBot(session: session, settings: settings, token: token, linker: linker)
+        notifier = SessionNotifier(session: session, settings: settings, token: token) { [bot] reply in
+            try await bot.notify(reply)
+        }
     }
 }

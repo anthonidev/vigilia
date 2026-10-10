@@ -16,6 +16,11 @@ final class SessionManager {
     @ObservationIgnored private let power: PowerAsserting
     @ObservationIgnored private var timerTask: Task<Void, Never>?
     @ObservationIgnored private var continuations: [UUID: AsyncStream<SessionEvent>.Continuation] = [:]
+    @ObservationIgnored private var observers: [(SessionEvent) -> Void] = []
+    /// Si toca avisar al bajar de 10 minutos.
+    @ObservationIgnored private var warningArmed = false
+
+    static let warningThreshold: TimeInterval = 10 * 60
 
     init(timeSource: TimeSource = SystemTimeSource(), power: PowerAsserting = PowerAssertion()) {
         self.timeSource = timeSource
@@ -35,6 +40,7 @@ final class SessionManager {
         power.acquire()
         startTimer()
         refreshRemaining()
+        armWarning()
         emit(.started(duration))
     }
 
@@ -51,6 +57,7 @@ final class SessionManager {
             state = .active(endDate: base.addingTimeInterval(TimeInterval(minutes * 60)))
             selectedOption = nil
             refreshRemaining()
+            armWarning()
             emit(.changed)
             return .extended
         }
@@ -65,6 +72,7 @@ final class SessionManager {
         state = .active(endDate: endDate(for: .minutes(minutes)))
         selectedOption = nil
         refreshRemaining()
+        armWarning()
         emit(.changed)
     }
 
@@ -77,6 +85,7 @@ final class SessionManager {
         state = .active(endDate: nil)
         selectedOption = .indefinite
         refreshRemaining()
+        armWarning()
         emit(.changed)
     }
 
@@ -84,13 +93,22 @@ final class SessionManager {
         end(.deactivated)
     }
 
+    /// Desactivación pedida desde Telegram.
+    func deactivate(remotely: Bool) {
+        end(remotely ? .deactivatedRemotely : .deactivated)
+    }
+
     /// Comprueba si el tiempo se acabó y refresca el tiempo restante. Lo llama el temporizador cada segundo.
     func tick() {
         guard case .active(endDate: let endDate?) = state else { return }
         if timeSource.now >= endDate {
-            end(.expired)
-        } else {
-            refreshRemaining()
+            end(.expired(at: endDate))
+            return
+        }
+        refreshRemaining()
+        if warningArmed, let remaining, remaining <= Self.warningThreshold {
+            warningArmed = false
+            emit(.tenMinutesLeft)
         }
     }
 
@@ -107,6 +125,12 @@ final class SessionManager {
         return stream
     }
 
+    /// Recibe los eventos de forma síncrona, en el momento en que ocurren.
+    /// Útil cuando hay que reaccionar antes de que siga el código (por ejemplo, al salir).
+    func observe(_ handler: @escaping (SessionEvent) -> Void) {
+        observers.append(handler)
+    }
+
     // MARK: - Privado
 
     private func end(_ reason: SessionEndReason) {
@@ -114,6 +138,7 @@ final class SessionManager {
         state = .inactive
         selectedOption = nil
         remaining = nil
+        warningArmed = false
         timerTask?.cancel()
         timerTask = nil
         power.release()
@@ -125,6 +150,11 @@ final class SessionManager {
         case .indefinite: nil
         case .minutes(let minutes): timeSource.now.addingTimeInterval(TimeInterval(minutes * 60))
         }
+    }
+
+    /// Se rearma cada vez que el tiempo restante vuelve a superar los 10 minutos.
+    private func armWarning() {
+        warningArmed = (remaining ?? 0) > Self.warningThreshold
     }
 
     private func refreshRemaining() {
@@ -146,6 +176,9 @@ final class SessionManager {
     }
 
     private func emit(_ event: SessionEvent) {
+        for observer in observers {
+            observer(event)
+        }
         for continuation in continuations.values {
             continuation.yield(event)
         }

@@ -22,6 +22,7 @@ final class MenuBarIcon {
                 switch event {
                 case .started, .changed: self?.playSteam()
                 case .ended: self?.stopSteam()
+                case .tenMinutesLeft: break
                 }
             }
         }

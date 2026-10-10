@@ -11,6 +11,7 @@ final class FakeSession: SessionControlling {
     private(set) var extendCalls: [Int] = []
     private(set) var setCalls: [Int] = []
     private(set) var deactivated = false
+    private(set) var deactivatedRemotely = false
 
     func extend(byMinutes minutes: Int) -> ExtendResult {
         extendCalls.append(minutes)
@@ -30,8 +31,9 @@ final class FakeSession: SessionControlling {
         remaining = nil
     }
 
-    func deactivate() {
+    func deactivate(remotely: Bool) {
         deactivated = true
+        deactivatedRemotely = remotely
         isActive = false
     }
 }
@@ -52,6 +54,8 @@ actor FakeTelegramClient {
     private(set) var sent: [SentMessage] = []
     private(set) var answeredCallbacks: [String] = []
     private(set) var commandsSet = false
+    /// Mensajes a los que se les quitaron los botones (chat, mensaje).
+    private(set) var clearedKeyboards: [Int] = []
 
     func setPending(_ updates: [TelegramUpdate]) { pending = updates }
     func setError(_ error: TelegramError?) { self.error = error }
@@ -83,7 +87,9 @@ extension FakeTelegramClient: TelegramClient {
         return TelegramMessage(messageId: sent.count, from: nil, chat: TelegramChat(id: chatID, type: "private"), text: text)
     }
 
-    func editMessageReplyMarkup(chatID: Int64, messageID: Int, keyboard: InlineKeyboardMarkup?) async throws {}
+    func editMessageReplyMarkup(chatID: Int64, messageID: Int, keyboard: InlineKeyboardMarkup?) async throws {
+        if keyboard == nil { clearedKeyboards.append(messageID) }
+    }
 
     func answerCallbackQuery(id: String, text: String?) async throws {
         answeredCallbacks.append(id)

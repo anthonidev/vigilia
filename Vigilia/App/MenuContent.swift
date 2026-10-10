@@ -5,6 +5,7 @@ struct MenuContent: View {
     let bot: TelegramBot
     let settings: AppSettings
     let token: TelegramTokenStore
+    let notifier: SessionNotifier
 
     @Environment(\.openSettings) private var openSettings
 
@@ -43,7 +44,11 @@ struct MenuContent: View {
 
         Button("Salir") {
             session.deactivate()
-            NSApplication.shared.terminate(nil)
+            // Da tiempo a que salga el aviso de fin por Telegram.
+            Task {
+                await notifier.flush(timeout: .seconds(5))
+                NSApplication.shared.terminate(nil)
+            }
         }
         .keyboardShortcut("q")
     }

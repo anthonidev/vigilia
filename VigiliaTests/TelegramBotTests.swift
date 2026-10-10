@@ -84,6 +84,25 @@ final class TelegramBotTests {
         #expect(await eventually { await sent().count == 1 })
         #expect(session.extendCalls == [30])
         #expect(await client.answeredCallbacks == ["cb1"])
+        #expect(await client.clearedKeyboards == [1])
+    }
+
+    @Test func dismissButton() async {
+        _ = startBot()
+        await client.enqueue(Updates.button("dismiss", id: 1, from: Self.owner))
+
+        #expect(await eventually { await sent().count == 1 })
+        #expect(await sent().first?.text.contains("terminará a su hora") == true)
+        #expect(session.extendCalls.isEmpty)
+    }
+
+    @Test func notifySendsToLinkedAccountWithoutPolling() async throws {
+        session.isActive = false
+        let bot = startBot()
+        #expect(bot.status == .off)
+
+        try await bot.notify(BotReply(text: "Hola"))
+        #expect(await sent() == [SentMessage(chatID: Self.owner, text: "Hola", keyboard: nil)])
     }
 
     @Test func offRepliesThenDeactivatesAndStops() async {
@@ -91,6 +110,7 @@ final class TelegramBotTests {
         await client.enqueue(Updates.text("/off", id: 1, from: Self.owner))
 
         #expect(await eventually { session.deactivated })
+        #expect(session.deactivatedRemotely)
         #expect(await sent().first?.text.contains("desactivada") == true)
         #expect(await eventually { bot.status == .off })
     }

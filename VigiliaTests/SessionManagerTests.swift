@@ -103,7 +103,7 @@ struct SessionManagerTests {
         #expect(session.remaining == nil)
         #expect(!power.isHeld)
         #expect(await events.next() == .started(.minutes(10)))
-        #expect(await events.next() == .ended(.expired))
+        #expect(await events.next() == .ended(.expired(at: clock.now)))
     }
 
     @Test func indefiniteSessionNeverExpires() {
@@ -154,5 +154,68 @@ struct SessionManagerTests {
 
         #expect(await first.next() == .started(.indefinite))
         #expect(await second.next() == .started(.indefinite))
+    }
+
+    // MARK: - Aviso de los 10 minutos
+
+    @Test func warnsOnceWhenTenMinutesLeft() {
+        var events: [SessionEvent] = []
+        session.observe { events.append($0) }
+        session.activate(.minutes(30))
+
+        clock.advance(minutes: 19)
+        session.tick()
+        #expect(!events.contains(.tenMinutesLeft))
+
+        clock.advance(minutes: 1)
+        session.tick()
+        clock.advance(minutes: 1)
+        session.tick()
+        #expect(events.filter { $0 == .tenMinutesLeft }.count == 1)
+    }
+
+    @Test func noWarningForShortSessions() {
+        var events: [SessionEvent] = []
+        session.observe { events.append($0) }
+        session.activate(.minutes(10))
+
+        clock.advance(minutes: 5)
+        session.tick()
+        #expect(!events.contains(.tenMinutesLeft))
+    }
+
+    @Test func warningRearmsAfterExtending() {
+        var events: [SessionEvent] = []
+        session.observe { events.append($0) }
+        session.activate(.minutes(20))
+        clock.advance(minutes: 11)
+        session.tick()
+
+        session.extend(byMinutes: 30)
+        clock.advance(minutes: 30)
+        session.tick()
+        #expect(events.filter { $0 == .tenMinutesLeft }.count == 2)
+    }
+
+    @Test func expiryAfterSleepSkipsWarningAndKeepsEndTime() {
+        var events: [SessionEvent] = []
+        session.observe { events.append($0) }
+        session.activate(.minutes(30))
+        let endDate = clock.now.addingTimeInterval(minutes(30))
+
+        // La Mac durmió más allá del final: no hay aviso de 10 min, solo el de fin con su hora real.
+        clock.advance(minutes: 90)
+        session.tick()
+        #expect(!events.contains(.tenMinutesLeft))
+        #expect(events.last == .ended(.expired(at: endDate)))
+    }
+
+    @Test func remoteDeactivationIsDistinguished() {
+        var events: [SessionEvent] = []
+        session.observe { events.append($0) }
+        session.activate(.indefinite)
+        session.deactivate(remotely: true)
+
+        #expect(events.last == .ended(.deactivatedRemotely))
     }
 }

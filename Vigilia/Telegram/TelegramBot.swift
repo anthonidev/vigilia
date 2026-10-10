@@ -60,6 +60,13 @@ final class TelegramBot {
         return settings.botEnabled && settings.isAccountLinked && session.isActive
     }
 
+    /// Envía un aviso a la cuenta vinculada. No necesita que el polling esté encendido.
+    func notify(_ reply: BotReply) async throws {
+        // En un chat privado, el ID del chat es el del usuario.
+        guard let chatID = settings.authorizedUserID, let value = try token.load() else { return }
+        try await makeClient(value).sendMessage(chatID: chatID, text: reply.text, keyboard: reply.keyboard)
+    }
+
     /// Comprueba el token con `getMe` y devuelve el bot.
     func testToken() async throws -> TelegramUser {
         guard let value = try token.load() else { throw TelegramError.invalidToken }
@@ -229,6 +236,10 @@ final class TelegramBot {
 
         // Quita el reloj de carga del botón cuanto antes.
         try? await client.answerCallbackQuery(id: callback.id, text: nil)
+        // Y los botones de ese mensaje, para no pulsarlos dos veces. La respuesta trae botones nuevos.
+        if let message = callback.message {
+            try? await client.editMessageReplyMarkup(chatID: chat.id, messageID: message.messageId, keyboard: nil)
+        }
 
         guard let data = callback.data, let command = BotCommand(callbackData: data) else { return }
         await respond(to: command, chatID: chat.id, client: client)
@@ -240,7 +251,7 @@ final class TelegramBot {
 
         switch reply.followUp {
         case .none: break
-        case .deactivate: session.deactivate()
+        case .deactivate: session.deactivate(remotely: true)
         }
     }
 
