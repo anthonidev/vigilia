@@ -19,6 +19,7 @@ struct AppSettingsTests {
         #expect(settings.notificationsEnabled)
         #expect(settings.authorizedUserID == nil)
         #expect(!settings.isAccountLinked)
+        #expect(settings.iconStyle == .mug)
     }
 
     @Test func valuesPersistAcrossInstances() {
@@ -27,8 +28,10 @@ struct AppSettingsTests {
         settings.notificationsEnabled = false
         settings.authorizedUserID = 123_456_789_012
         settings.authorizedUserName = "tonis"
+        settings.iconStyle = .flame
 
         let reloaded = AppSettings(defaults: defaults)
+        #expect(reloaded.iconStyle == .flame)
         #expect(reloaded.botEnabled)
         #expect(!reloaded.notificationsEnabled)
         #expect(reloaded.authorizedUserID == 123_456_789_012)

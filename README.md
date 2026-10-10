@@ -39,7 +39,10 @@ Vigilia también se puede usar sin bot: deja **Activar bot** apagado.
 
 Elige una duración: indefinido, 10 o 30 minutos, o 1, 2, 4, 8 o 12 horas. Elegir otra con una sesión activa reemplaza el tiempo.
 
-- La taza se rellena y suelta vapor al activarse.
+- El ícono se rellena y se anima al activarse. En **Configuración… → Apariencia** puedes elegir el estilo:
+  - **Taza** (por defecto): suelta vapor.
+  - **Llama**: titila y suelta chispas.
+  - **Foco**: se enciende con rayos de luz.
 - Al pasar el cursor por la taza se ve el tiempo restante.
 - **Desactivar** devuelve la Mac a su comportamiento normal.
 
@@ -100,7 +103,7 @@ swift scripts/generate-icon.swift Vigilia/Assets.xcassets/AppIcon.appiconset
 
 | Carpeta | Contenido |
 |---|---|
-| `Vigilia/App/` | Arranque (`AppDelegate`), ícono y menú de la barra (`StatusItemController`), sueño y red |
+| `Vigilia/App/` | Arranque (`AppDelegate`), menú de la barra (`StatusItemController`), estilos y animaciones del ícono (`MenuBarIconRenderer`), sueño y red |
 | `Vigilia/Session/` | `SessionManager`, la única fuente de verdad de la sesión, y la aserción de energía de IOKit |
 | `Vigilia/Telegram/` | Cliente de la Bot API, comandos, bot, vinculación y avisos |
 | `Vigilia/Screenshot/` | Capturas con ScreenCaptureKit y codificación JPEG/PNG |

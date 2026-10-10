@@ -12,6 +12,11 @@ final class AppSettings {
         didSet { defaults.set(notificationsEnabled, forKey: Keys.notificationsEnabled) }
     }
 
+    /// Ícono de la barra de menú.
+    var iconStyle: IconStyle {
+        didSet { defaults.set(iconStyle.rawValue, forKey: Keys.iconStyle) }
+    }
+
     /// ID de usuario de Telegram al que obedece el bot.
     var authorizedUserID: Int64? {
         didSet { defaults.set(authorizedUserID, forKey: Keys.authorizedUserID) }
@@ -32,6 +37,7 @@ final class AppSettings {
         ])
         botEnabled = defaults.bool(forKey: Keys.botEnabled)
         notificationsEnabled = defaults.bool(forKey: Keys.notificationsEnabled)
+        iconStyle = defaults.string(forKey: Keys.iconStyle).flatMap(IconStyle.init(rawValue:)) ?? .mug
         authorizedUserID = (defaults.object(forKey: Keys.authorizedUserID) as? NSNumber)?.int64Value
         authorizedUserName = defaults.string(forKey: Keys.authorizedUserName)
     }
@@ -46,6 +52,7 @@ final class AppSettings {
     private enum Keys {
         static let botEnabled = "botEnabled"
         static let notificationsEnabled = "notificationsEnabled"
+        static let iconStyle = "iconStyle"
         static let authorizedUserID = "authorizedUserID"
         static let authorizedUserName = "authorizedUserName"
     }

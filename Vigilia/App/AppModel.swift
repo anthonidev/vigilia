@@ -14,8 +14,8 @@ final class AppModel {
 
     init() {
         session = SessionManager()
-        icon = MenuBarIcon(session: session)
         settings = AppSettings()
+        icon = MenuBarIcon(session: session, settings: settings)
         token = TelegramTokenStore()
         loginItem = LoginItem()
         linker = AccountLinker(settings: settings)

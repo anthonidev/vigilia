@@ -1,3 +1,4 @@
+import AppKit
 import Testing
 @testable import Vigilia
 
@@ -9,8 +10,22 @@ struct MenuBarIconTests {
         #expect(MenuBarIcon.intensity(at: 3) == 0)
     }
 
-    @Test func activeAndInactiveIconsAreTemplates() {
-        #expect(CupIcon.image(active: true, steam: nil).isTemplate)
-        #expect(CupIcon.image(active: false, steam: SteamFrame(phase: 0.5, intensity: 1)).isTemplate)
+    @Test(arguments: IconStyle.allCases)
+    func everyStyleRendersTemplates(style: IconStyle) {
+        let frame = IconAnimationFrame(phase: 0.5, intensity: 1)
+        for active in [true, false] {
+            for frame in [nil, frame] {
+                let image = MenuBarIconRenderer.image(style: style, active: active, frame: frame)
+                #expect(image.isTemplate)
+                #expect(image.cgImage(forProposedRect: nil, context: nil, hints: nil) != nil)
+            }
+        }
+    }
+
+    @Test(arguments: IconStyle.allCases)
+    func everyStyleUsesExistingSymbols(style: IconStyle) {
+        for active in [true, false] {
+            #expect(NSImage(systemSymbolName: style.symbol(active: active), accessibilityDescription: nil) != nil)
+        }
     }
 }

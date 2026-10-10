@@ -7,6 +7,7 @@ struct SettingsView: View {
     let linker: AccountLinker
     let bot: TelegramBot
     let screenshots: ScreenshotService
+    let icon: MenuBarIcon
 
     var body: some View {
         Form {
@@ -20,6 +21,13 @@ struct SettingsView: View {
 
             Section("Capturas de pantalla") {
                 ScreenRecordingRow(screenshots: screenshots)
+            }
+
+            Section("Apariencia") {
+                IconStylePicker(selection: $settings.iconStyle) {
+                    // Muestra la animación en la barra para ver cómo queda.
+                    icon.playAnimation()
+                }
             }
 
             Section("General") {
@@ -282,6 +290,50 @@ private struct ScreenRecordingRow: View {
             screenshots.refreshPermission()
         }
         .onAppear { screenshots.refreshPermission() }
+    }
+}
+
+// MARK: - Ícono
+
+private struct IconStylePicker: View {
+    @Binding var selection: IconStyle
+    let onSelect: () -> Void
+
+    var body: some View {
+        LabeledContent("Ícono de la barra") {
+            HStack(spacing: 8) {
+                ForEach(IconStyle.allCases) { style in
+                    let isSelected = style == selection
+                    Button {
+                        selection = style
+                        onSelect()
+                    } label: {
+                        VStack(spacing: 4) {
+                            Image(nsImage: MenuBarIconRenderer.image(style: style, active: true, frame: nil))
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 26)
+                                .foregroundStyle(.primary)
+                            Text(style.title)
+                                .font(.caption)
+                        }
+                        .frame(width: 60, height: 58)
+                        .background(
+                            isSelected ? Color.accentColor.opacity(0.18) : Color.clear,
+                            in: .rect(cornerRadius: 8)
+                        )
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8)
+                                .strokeBorder(isSelected ? Color.accentColor : Color.secondary.opacity(0.3))
+                        }
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
+                }
+            }
+        }
     }
 }
 
