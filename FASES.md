@@ -278,7 +278,7 @@ Probado con el bot real el 2026-10-10. Los marcados con *(tests)* están cubiert
 
 ---
 
-## Fase 6: Robustez y pulido
+## Fase 6: Robustez y pulido 🟡 código listo, falta la prueba de un día real
 
 **Objetivo:** que funcione bien en el día a día, sin sorpresas.
 
@@ -291,12 +291,12 @@ Probado con el bot real el 2026-10-10. Los marcados con *(tests)* están cubiert
 - [x] **Ícono de la app:** taza con vapor sobre un cielo nocturno, generado con `scripts/generate-icon.swift`.
 - [x] **Registro:** `Logger` (`os`) con el subsistema `com.tonis.vigilia` y categorías `session`, `telegram`, `screenshot`. **El token nunca se registra.**
 - [x] **Instalación:** `scripts/install.sh` compila en Release, cierra cualquier copia abierta y copia `Vigilia.app` a `/Applications` (adelantado antes de la fase 5).
-- [ ] Revisar todos los textos (español, tono consistente).
-- [ ] Un `README.md` con la configuración inicial (BotFather → token → vincular → permisos).
+- [x] Revisar todos los textos (español, tono consistente).
+- [x] Un `README.md` con la instalación, la configuración inicial, el uso, la seguridad y el desarrollo.
 
 ### Criterios de aceptación
-- Prueba de un día real: sesiones largas, la Mac dormida y despertada, el Wi-Fi apagado y encendido. El bot siempre se recupera sin reiniciar la app.
-- En Consola.app se ven los registros por categoría y en ninguno aparece el token.
+- [ ] Prueba de un día real: sesiones largas, la Mac dormida y despertada, el Wi-Fi apagado y encendido. El bot siempre se recupera sin reiniciar la app.
+- [x] En ninguno de los registros de Vigilia de las últimas 6 horas aparece nada con forma de token. Los registros informativos se ven en directo en Consola.app (subsistema `com.tonis.vigilia`).
 - [x] `scripts/install.sh` deja la app instalada y funcionando desde `/Applications`.
 
 ---

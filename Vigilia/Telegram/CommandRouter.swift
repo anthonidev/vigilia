@@ -59,7 +59,7 @@ struct CommandRouter {
             guard session.isActive else { return BotReply(text: BotText.inactive) }
             session.makeIndefinite()
             return BotReply(
-                text: "♾️ Sesión indefinida. La Mac seguirá despierta hasta que la apagues.",
+                text: "♾️ Sesión indefinida. La Mac seguirá despierta hasta que desactives la sesión.",
                 keyboard: BotKeyboards.controls
             )
 

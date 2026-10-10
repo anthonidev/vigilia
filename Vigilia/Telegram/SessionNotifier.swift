@@ -95,7 +95,7 @@ final class SessionNotifier {
             var text = "😴 Sesión terminada. Tu Mac ya puede dormir."
             if now.timeIntervalSince(endDate) > lateThreshold {
                 let time = endDate.formatted(date: .omitted, time: .shortened)
-                text += "\n(Terminó a las \(time), mientras la Mac dormía)."
+                text += "\n(Terminó a las \(time), mientras la Mac dormía.)"
             }
             return BotReply(text: text)
         case .ended(.deactivated):
